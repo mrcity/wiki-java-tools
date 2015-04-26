@@ -78,7 +78,7 @@ class TopBotThread extends Thread {
 			if (i % 25 == 0)
 				System.out.println(this.getName() + "   PROGRESS: " + i
 						+ " of " + members.length + " done.");
-			cArray[i][1] = wiki.getGlobalUsageCount(members[i]);
+			cArray[i][1] = getActualUsageCount(wiki.getGlobalUsage(members[i]));
 			cArray[i][0] = members[i];
 		}
 
@@ -88,9 +88,10 @@ class TopBotThread extends Thread {
 			}
 		});
 
-		String text = "Last update: "
+		String text = "\nLast update: "
 				+ DateFormat.getDateInstance(DateFormat.FULL).format(
 						Calendar.getInstance().getTime()) + "." + "\n"
+				+ "\nCounting only the usage in the main namespace:\n\n"
 				+ "<gallery showfilename=yes >\n";
 		for (int i = 0; i < Math.min(number, members.length); i++) {
 			text = text + cArray[i][0] + "|" + (i + 1) + ". Used "
@@ -108,13 +109,23 @@ class TopBotThread extends Thread {
 				+ separator + "\n" + text, "Update");
 	}
 
+	private int getActualUsageCount(String[][] globalUsage) {
+		int count = 0;
+		for (String[] usage : globalUsage) {
+			String title = usage[1];
+			if (!title.contains(":"))
+				count++;
+		}
+		return count;
+	}
+
 }
 
 public class TopBot {
 
 	public static void main(String[] args) {
 
-		System.out.println("v14.10.14");
+		System.out.println("v15.04.26");
 
 		String[] expectedArgs = { "username" };
 		String[] expectedArgsDescription = { "username is your username on the wiki." };
@@ -131,7 +142,7 @@ public class TopBot {
 		try {
 			System.out.println("Please type in the password for " + args[0]
 					+ ".");
-			commons.login(args[0], "5f3wtJrqxGyB6K8PSaeRqhzL");
+			commons.login(args[0], System.console().readPassword());
 
 			commons.setThrottle(5 * 1000);
 			commons.setMaxLag(3);

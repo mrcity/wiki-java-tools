@@ -1,44 +1,48 @@
 package app;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.logging.Level;
+
 import wiki.Wiki;
 
-public class ImkerCLI {
-	private static final String categoryParam = "-category=";
-	private static final String pageParam = "-page=";
-	private static final String fileParam = "-file=";
+public class ImkerCLI extends ImkerBase {
+	private static final String CATEGORY_PARAM = "-category=";
+	private static final String PAGE_PARAM = "-page=";
+	private static final String FILE_PARAM = "-file=";
 	private static final String outParam = "-outfolder=";
-	private static final String version = "v15.04.26";
 
 	public static void main(String[] args) throws FileNotFoundException,
 			IOException {
 
-		System.out.println(version);
+		System.out.println(PROGRAM_NAME);
+		System.out.println(msgs.getString("Description_Program"));
+		System.out.println(VERSION);
+		System.out.println();
 		printWelcome(args);
 
-		Wiki commons = new Wiki("commons.wikimedia.org");
-		commons.setMaxLag(3);
-		commons.setLogLevel(Level.WARNING);
+		wiki = new Wiki("commons.wikimedia.org");
+		wiki.setMaxLag(3);
+		wiki.setLogLevel(Level.WARNING);
 
-		File outputFolder = getFolder(args[1]);
-		String[] fileNames = getFilenames(args[0], commons);
+		outputFolder = getFolder(args[1]);
+		fileNames = getFilenames(args[0]);
 
-		download(fileNames, outputFolder, commons);
+		download();
+		// TODO verifyChecksum();
 	}
 
-	private static void download(String[] fileNames, File outputFolder,
-			Wiki wiki) throws IOException {
+	private static void download() throws IOException {
 
-		System.out.println("\nFolder: " + outputFolder.getPath()
-				+ "\nDownload " + fileNames.length + " files?\n"
-				+ "Press enter to continue. (Abort with CTRL+C)");
+		System.out.println("\n"
+				+ msgs.getString("Text_Folder")
+				+ " "
+				+ outputFolder.getPath()
+				+ "\n"
+				+ String.format(msgs.getString("Prompt_Download"),
+						fileNames.length) + "\n"
+				+ msgs.getString("Prompt_Enter"));
 		System.in.read();
 
 		for (int i = 0; i < fileNames.length; i++) {
@@ -48,17 +52,19 @@ public class ImkerCLI {
 			File outputFile = new File(outputFolder.getPath() + File.separator
 					+ fileName);
 			if (outputFile.exists()) {
-				System.out.println(" ... exists locally");
+				System.out.println(" ... "
+						+ msgs.getString("Status_File_Exists"));
 				continue;
 			}
 			boolean downloaded = wiki.getImage(fileName, outputFile);
 			if (downloaded == false) {
-				System.out.println(" ... not found");
+				System.out.println(" ... "
+						+ msgs.getString("Status_File_Not_Found"));
 				continue;
 			}
-			System.out.println(" ... saved");
+			System.out.println(" ... " + msgs.getString("Status_File_Saved"));
 		}
-		System.out.println("\nCompleted run!");
+		System.out.println("\n" + msgs.getString("Status_Run_Complete"));
 	}
 
 	private static File getFolder(String pathArg) {
@@ -75,29 +81,30 @@ public class ImkerCLI {
 		if (folder.isDirectory()) {
 			return folder;
 		} else {
-			System.out.println("ERROR: Is not a folder: " + path);
+			System.out.println(msgs.getString("Status_Not_A Folder") + " "
+					+ path);
 			System.exit(-1);
 			return null;
 		}
 	}
 
-	private static String[] getFilenames(String input, Wiki wiki)
+	private static String[] getFilenames(String input)
 			throws FileNotFoundException, IOException {
 
-		int catIndex = input.indexOf(categoryParam);
-		int pageIndex = input.indexOf(pageParam);
-		int fileIndex = input.indexOf(fileParam);
+		int catIndex = input.indexOf(CATEGORY_PARAM);
+		int pageIndex = input.indexOf(PAGE_PARAM);
+		int fileIndex = input.indexOf(FILE_PARAM);
 
 		if (catIndex > 0) {
 			boolean subcat = false; // TODO: add argument --subcat
-			catIndex += categoryParam.length();
+			catIndex += CATEGORY_PARAM.length();
 			return wiki.getCategoryMembers(input.substring(catIndex), subcat,
 					Wiki.FILE_NAMESPACE);
 		} else if (pageIndex > 0) {
-			pageIndex += pageParam.length();
+			pageIndex += PAGE_PARAM.length();
 			return wiki.getImagesOnPage(input.substring(pageIndex));
 		} else if (fileIndex > 0) {
-			fileIndex += fileParam.length();
+			fileIndex += FILE_PARAM.length();
 			return readFileNames(input.substring(fileIndex));
 		} else {
 			// exit and warn user
@@ -112,30 +119,13 @@ public class ImkerCLI {
 			throws FileNotFoundException, IOException {
 		File input = new File(localFilePath);
 		if (input.isFile()) {
-
-			Queue<String> FileNameQueue = new LinkedList<String>();
-
-			try (BufferedReader br = new BufferedReader(new FileReader(
-					localFilePath))) {
-				String line = br.readLine();
-				while (line != null) {
-					FileNameQueue.add(normalizeFileName(line));
-					line = br.readLine();
-				}
-			}
-			String[] tempStringArray = { "" };
-			return FileNameQueue.toArray(tempStringArray);
-
+			return parseFileNames(localFilePath);
 		} else {
-			System.out.println("ERROR: Is not a file: " + localFilePath);
+			System.out.println(msgs.getString("Status_Not_A_File") + " "
+					+ localFilePath);
 			System.exit(-1);
 			return null;
 		}
-	}
-
-	private static String normalizeFileName(String line) {
-		line = "File:" + line.replaceFirst("^([fF]ile:)", "");
-		return line;
 	}
 
 	/**
@@ -146,17 +136,21 @@ public class ImkerCLI {
 	 */
 	private static void printWelcome(String[] args) {
 
-		String[] expectedArgs = { "download-source", "target-folder" };
+		String[] expectedArgs = { msgs.getString("CLI_Arg_Src"),
+				msgs.getString("CLI_Arg_Output") };
 		String[] expectedArgsDescription = {
-				"download-source can be a category, wiki page or local file."
-						+ "\n    Examples:" + "\n     -" + categoryParam
-						+ "\"Denver, Colorado\"" + "\n     -" + pageParam
-						+ "\"Sandboarding\"" + "\n     -" + fileParam
-						+ "\"Documents/files.txt\" (one filename per line!)",
-				"target-folder is the output folder." + "\n    Example:"
-						+ "\n     -" + outParam + "\"user/downloads\"" };
+				msgs.getString("Description_Download_Src") + "\n    "
+						+ msgs.getString("Text_Examples") + "\n     -"
+						+ CATEGORY_PARAM + "\"Denver, Colorado\"" + "\n     -"
+						+ PAGE_PARAM + "\"Sandboarding\"" + "\n     -"
+						+ FILE_PARAM + "\"Documents/files.txt\" ("
+						+ msgs.getString("Hint_File_Syntax") + ")",
+				msgs.getString("Description_Target_Folder") + "\n    "
+						+ msgs.getString("Text_Example") + "\n     -"
+						+ outParam + "\"user/downloads\"" };
 		if (args == null || args.length != expectedArgs.length) {
-			System.out.print("Usage: java -jar filename.jar");
+			System.out.print(msgs.getString("Text_Usage")
+					+ " java -jar filename.jar");
 			for (String i : expectedArgs)
 				System.out.print(" [" + i + "]");
 			System.out.println("");

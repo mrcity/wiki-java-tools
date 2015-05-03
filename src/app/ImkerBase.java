@@ -16,15 +16,25 @@ public class ImkerBase {
 	protected static final String VERSION = "v15.05.01";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new";
-	protected static final String[] INVALID_TITLE_CHARS = { "{", "}", "<", ">",
-			"[", "]", "|" };
+	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
+			">", "[", "]", "|" };
 	protected static Wiki wiki = null;
 	protected static String[] fileNames = null;
 	protected static File outputFolder = null;
-
-	protected static final ResourceBundle msgs = ResourceBundle.getBundle(
+	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
 			"app.I18nBundle", Locale.getDefault());
 
+	/**
+	 * Read the given file and extract valid file names in each line
+	 * 
+	 * @param localFilePath
+	 *            the path to the local file
+	 * @return array holding all file names
+	 * @throws FileNotFoundException
+	 *             if the local file was not found
+	 * @throws IOException
+	 *             if there was an issue reading the file
+	 */
 	protected static String[] parseFileNames(String localFilePath)
 			throws FileNotFoundException, IOException {
 		Queue<String> FileNameQueue = new LinkedList<String>();
@@ -43,8 +53,15 @@ public class ImkerBase {
 		return FileNameQueue.toArray(tempStringArray);
 	}
 
+	/**
+	 * Discard invalid file names and normalize the other.
+	 * 
+	 * @param line
+	 *            the String to be normalized
+	 * @return a normalized file name or null
+	 */
 	protected static String normalizeFileName(String line) {
-		for (String invalidChar : INVALID_TITLE_CHARS) {
+		for (String invalidChar : INVALID_FILE_NAME_CHARS) {
 			if (line.contains(invalidChar))
 				return null;
 		}

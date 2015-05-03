@@ -9,6 +9,7 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Dialog.ModalityType;
 import java.awt.Image;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -45,6 +46,7 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
+
 import wiki.Wiki;
 
 class State {
@@ -704,7 +706,8 @@ public class ImkerGUI extends ImkerBase {
 
 		List<Image> icons = new ArrayList<Image>();
 		for (int px = 512; px >= 16; px = px / 2) {
-			icons.add(new ImageIcon("src/pics/icon-" + px + ".png").getImage());
+			icons.add(Toolkit.getDefaultToolkit().getImage(
+					ImkerGUI.class.getResource("/pics/icon-" + px + ".png")));
 		}
 		FRAME.setIconImages(icons);
 

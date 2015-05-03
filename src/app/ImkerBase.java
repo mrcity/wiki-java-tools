@@ -13,7 +13,7 @@ import java.util.ResourceBundle;
 import wiki.Wiki;
 
 public class ImkerBase {
-	protected static final String VERSION = "v15.05.02";
+	protected static final String VERSION = "v15.05.03";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new";
 	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",

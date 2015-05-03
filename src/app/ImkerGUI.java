@@ -677,7 +677,8 @@ public class ImkerGUI extends ImkerBase {
 		Container logo = new Container();
 		logo.setLayout(new BoxLayout(logo, BoxLayout.X_AXIS));
 
-		logo.add(new JLabel(new ImageIcon("src/pics/logo-60.png")));
+		logo.add(new JLabel(new ImageIcon(ImkerGUI.class
+				.getResource("/pics/logo-60.png"))));
 
 		logo.add(Box.createHorizontalStrut(4 * GAP));
 

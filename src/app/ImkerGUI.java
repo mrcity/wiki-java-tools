@@ -2,7 +2,6 @@ package app;
 
 import java.awt.BorderLayout;
 import java.awt.Button;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.FlowLayout;
@@ -651,7 +650,9 @@ public class ImkerGUI extends ImkerBase {
 	 *            the GUI container
 	 */
 	private static void addActionButton(Container boxPane) {
-		MAIN_BUTTON.setFont(new Font("Sans", Font.BOLD, 16));
+		Font oldFont = MAIN_BUTTON.getFont();
+		MAIN_BUTTON.setFont(oldFont.deriveFont(oldFont.getSize2D()
+				/ (float) .75));
 		MAIN_BUTTON.setAlignmentX(Component.CENTER_ALIGNMENT);
 		MAIN_BUTTON.setEnabled(false);
 		MAIN_BUTTON.addActionListener(new ActionListener() {
@@ -674,12 +675,7 @@ public class ImkerGUI extends ImkerBase {
 		Container logo = new Container();
 		logo.setLayout(new BoxLayout(logo, BoxLayout.X_AXIS));
 
-		JLabel picLabel = new JLabel(new ImageIcon("src/pics/logo-60.png"));
-		// TODO fallback
-		// TODO fonts
-		picLabel.setFont(new Font("Serif", Font.ITALIC, 40));
-		picLabel.setForeground(Color.BLUE);
-		logo.add(picLabel);
+		logo.add(new JLabel(new ImageIcon("src/pics/logo-60.png")));
 
 		logo.add(Box.createHorizontalStrut(4 * GAP));
 

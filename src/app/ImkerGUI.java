@@ -46,7 +46,6 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
-
 import wiki.Wiki;
 
 class State {
@@ -70,24 +69,29 @@ class State {
 }
 
 public class ImkerGUI extends ImkerBase {
+
 	private static File inputFile = null;
 	private static String inputPage = null;
 	private static String inputCategory = null;
 	private static final JFrame FRAME = new JFrame(PROGRAM_NAME);
 	private static final JButton MAIN_BUTTON = new JButton("");
 	private static final JRadioButton FILE_BUTTON = new JRadioButton(
-			msgs.getString("Text_From_File"));
+			MSGS.getString("Text_From_File"));
 	private static final JRadioButton PAGE_BUTTON = new JRadioButton(
-			msgs.getString("Text_Page"));
+			MSGS.getString("Text_Page"));
 	private static final JRadioButton CATEGORY_BUTTON = new JRadioButton(
-			msgs.getString("Text_Category"));
+			MSGS.getString("Text_Category"));
 	private static final JTextField STATUS_TEXT_FIELD = new JTextField(45);
 	private static State state = new State(State.PRE_INIT);
 	private static boolean hasSource = false;
 	private static boolean hasTarget = false;
+	private static JProgressBar progressBarDownload;
 
 	private static final int GAP = 12;
 
+	/**
+	 * Decide which action to execute after the main button was pressed
+	 */
 	protected static void handleAction() {
 		switch (state.getState()) {
 		case State.PRE_INIT:
@@ -100,47 +104,67 @@ public class ImkerGUI extends ImkerBase {
 		case State.TERMINATED:
 			preInit(true);
 			break;
-		// default: // should never happen
+		default:
+			// should never happen
+			System.exit(-1);
 		}
 	}
 
+	/**
+	 * Loop over all file names, update the download progress bar and update the
+	 * status; Files already existing locally as well as files not found in the
+	 * remote are skipped!
+	 * 
+	 * @throws FileNotFoundException
+	 *             if the local file is not found (should never happen)
+	 * @throws IOException
+	 *             if a IO error occurs (network or file related)
+	 */
 	private static void downloadLoop() throws FileNotFoundException,
 			IOException {
 		for (int i = 0; i < fileNames.length; i++) {
 			String fileName = fileNames[i].substring("File:".length());
-			// progressBar.setValue(i);
+			progressBarDownload.setValue(i);
 			STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/" + fileNames.length
 					+ "): " + fileName);
 			File outputFile = new File(outputFolder.getPath() + File.separator
 					+ fileName);
 			if (outputFile.exists()) {
 				STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
-						+ msgs.getString("Status_File_Exists"));
+						+ MSGS.getString("Status_File_Exists"));
 				continue;
 			}
 			boolean downloaded = wiki.getImage(fileName, outputFile);
 			if (downloaded == false) {
 				STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
-						+ msgs.getString("Status_File_Not_Found"));
+						+ MSGS.getString("Status_File_Not_Found"));
 				continue;
 			}
 			STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
-					+ msgs.getString("Status_File_Saved"));
+					+ MSGS.getString("Status_File_Saved"));
 		}
 	}
 
+	/**
+	 * Terminate on invalid input; Otherwise try to fetch the file list while
+	 * blocking the UI with a pop up
+	 */
 	private static void initialize() {
 		if (!verifyInput()) {
-			STATUS_TEXT_FIELD.setText(msgs.getString("Error_Invalid_Input"));
-			MAIN_BUTTON.setText(msgs.getString("Button_Reset"));
+			STATUS_TEXT_FIELD.setText(MSGS.getString("Error_Invalid_Input"));
+			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
 			state.setState(State.TERMINATED);
 			return;
 		}
 		try {
-			STATUS_TEXT_FIELD.setText(msgs.getString("Status_Wait_For_List"));
-			tracker(msgs.getString("Status_Crawling"),
-					msgs.getString("Hint_Crawling"),
-					msgs.getString("Text_Exit"), new SwingWorker<Void, Void>() {
+			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Wait_For_List"));
+			JProgressBar progressBarIndet = new JProgressBar();
+			progressBarIndet.setIndeterminate(true);
+			progressBarIndet.setStringPainted(true);
+			progressBarIndet.setString(" ");
+			executeWorker(MSGS.getString("Status_Crawling"),
+					MSGS.getString("Hint_Crawling"), progressBarIndet,
+					MSGS.getString("Text_Exit"), new SwingWorker<Void, Void>() {
 
 						@Override
 						protected Void doInBackground()
@@ -156,24 +180,31 @@ public class ImkerGUI extends ImkerBase {
 
 		if (fileNames.length == 0) {
 			JOptionPane
-					.showMessageDialog(FRAME, msgs.getString("Error_No_Files"),
-							msgs.getString("Text_Warning"),
+					.showMessageDialog(FRAME, MSGS.getString("Error_No_Files"),
+							MSGS.getString("Text_Warning"),
 							JOptionPane.WARNING_MESSAGE);
-			STATUS_TEXT_FIELD.setText(msgs.getString("Error_No_Files"));
-			MAIN_BUTTON.setText(msgs.getString("Button_Reset"));
+			STATUS_TEXT_FIELD.setText(MSGS.getString("Error_No_Files"));
+			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
 			state.setState(State.TERMINATED);
 			return;
 		}
 		STATUS_TEXT_FIELD.setText(String.format(
-				msgs.getString("Prompt_Download"), fileNames.length));
-		MAIN_BUTTON.setText(String.format(msgs.getString("Button_Download"),
+				MSGS.getString("Prompt_Download"), fileNames.length));
+		MAIN_BUTTON.setText(String.format(MSGS.getString("Button_Download"),
 				fileNames.length));
 		state.setState(State.PRE_DOWNLOAD);
 	}
 
+	/**
+	 * Gracefully set state to State.TERMINATED and display an error message
+	 * with the exception
+	 * 
+	 * @param e
+	 *            the exception that occurred
+	 */
 	private static void terminate(Exception e) {
 		JTextArea ep = new JTextArea(e.toString() + "\n"
-				+ msgs.getString("Hint_Github_Issue") + "\n"
+				+ MSGS.getString("Hint_Github_Issue") + "\n"
 				+ githubIssueTracker);
 		ep.setEditable(false);
 		ep.setFocusable(true);
@@ -181,36 +212,51 @@ public class ImkerGUI extends ImkerBase {
 		ep.setBackground(new JLabel().getBackground());
 
 		JOptionPane.showMessageDialog(FRAME, ep,
-				msgs.getString("Status_Exception_Caught"),
+				MSGS.getString("Status_Exception_Caught"),
 				JOptionPane.ERROR_MESSAGE);
-		STATUS_TEXT_FIELD.setText(msgs.getString("Status_Exception_Caught"));
-		MAIN_BUTTON.setText(msgs.getString("Button_Reset"));
+		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Exception_Caught"));
+		MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
 		state.setState(State.TERMINATED);
 	}
 
-	private static void tracker(String dialogTitle, String infoText,
-			String exitButton, final SwingWorker<Void, Void> worker)
-			throws IOException {
-		// modal dialog -> disable interaction
-		final JDialog dialog = new JDialog(FRAME, dialogTitle + " - "
+	/**
+	 * Execute the worker and disable interaction by the modal dialog during the
+	 * execution; Exit when an InterruptedException occurs, otherwise Exceptions
+	 * are thrown
+	 * 
+	 * @param dialogTitle
+	 *            the text in the title bar of the modal dialog
+	 * @param infoText
+	 *            the text in the info section
+	 * @param progressBar
+	 *            the modal dialog's progress bar
+	 * @param exitButton
+	 *            the exit button
+	 * @param worker
+	 *            the worker
+	 * @throws Exception
+	 *             if an IO issue occurs during task execution
+	 */
+	private static void executeWorker(String dialogTitle, String infoText,
+			JProgressBar progressBar, String exitButton,
+			final SwingWorker<Void, Void> worker) throws Exception {
+
+		final JDialog modalDialog = new JDialog(FRAME, dialogTitle + " - "
 				+ PROGRAM_NAME, ModalityType.APPLICATION_MODAL);
-		dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+		modalDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+		modalDialog.setResizable(false);
 
-		dialog.setResizable(false);
-
-		JProgressBar progressBar = new JProgressBar();
-		progressBar.setIndeterminate(true);
-		progressBar.setStringPainted(true);
-		progressBar.setString(" ");
-		JPanel panel = new JPanel(new BorderLayout(GAP, GAP));
-		panel.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP, GAP));
-		panel.add(new JLabel(infoText), BorderLayout.PAGE_START);
-		panel.add(progressBar, BorderLayout.CENTER);
+		JPanel dialogContent = new JPanel(new BorderLayout(GAP, GAP));
+		dialogContent.setBorder(BorderFactory.createEmptyBorder(GAP, GAP, GAP,
+				GAP));
+		dialogContent.add(new JLabel(infoText), BorderLayout.PAGE_START);
+		dialogContent.add(progressBar, BorderLayout.CENTER);
 		Button exit = new Button(exitButton);
-		panel.add(exit, BorderLayout.PAGE_END);
-		dialog.add(panel);
-		dialog.pack();
-		dialog.setLocationRelativeTo(FRAME);
+		dialogContent.add(exit, BorderLayout.PAGE_END);
+
+		modalDialog.add(dialogContent);
+		modalDialog.pack();
+		modalDialog.setLocationRelativeTo(FRAME);
 
 		worker.addPropertyChangeListener(new PropertyChangeListener() {
 
@@ -218,7 +264,7 @@ public class ImkerGUI extends ImkerBase {
 			public void propertyChange(PropertyChangeEvent evt) {
 				if (evt.getPropertyName().equals("state")
 						&& evt.getNewValue() == SwingWorker.StateValue.DONE) {
-					dialog.dispose();
+					modalDialog.dispose();
 				}
 			}
 		});
@@ -226,15 +272,28 @@ public class ImkerGUI extends ImkerBase {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.exit(-1); // TODO
+				System.exit(-1);
+				// // TODO do not exit?
+				// worker.cancel(true);
+				// try {
+				// worker.get();
+				// } catch (InterruptedException | ExecutionException ignore) {
+				// }
+				// modalDialog.dispose();
+				// STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Cancelled"));
+				// MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
+				// state.setState(State.TERMINATED);
+				// cancelled = true;
+				// // in executeWorker() calling function:
+				// if (cancelled)
+				// doSthDifferent();
 			}
 		});
 
 		worker.execute();
-		// pop up modal dialog -> block until task is done
-		dialog.setVisible(true);
 
-		// task is done and we can get the exception
+		// block this thread until dialog is disposed
+		modalDialog.setVisible(true);
 
 		try {
 			worker.get();
@@ -248,22 +307,27 @@ public class ImkerGUI extends ImkerBase {
 		}
 	}
 
+	/**
+	 * Warn the user about invalid input
+	 * 
+	 * @return if the input is valid
+	 */
 	private static boolean verifyInput() {
 		if (CATEGORY_BUTTON.isSelected()) {
 			if (inputCategory == null || inputCategory.length() == 0) {
 				JOptionPane.showMessageDialog(FRAME,
-						msgs.getString("Error_Invalid_Name_Category") + " \""
+						MSGS.getString("Error_Invalid_Name_Category") + " \""
 								+ inputCategory + "\"",
-						msgs.getString("Title_Invalid_Name"),
+						MSGS.getString("Title_Invalid_Name"),
 						JOptionPane.WARNING_MESSAGE);
 				return false;
 			}
 		} else if (PAGE_BUTTON.isSelected()) {
 			if (inputPage == null || inputPage.length() == 0) {
 				JOptionPane.showMessageDialog(FRAME,
-						msgs.getString("Error_Invalid_Name_Page") + " \""
+						MSGS.getString("Error_Invalid_Name_Page") + " \""
 								+ inputPage + "\"",
-						msgs.getString("Title_Invalid_Name"),
+						MSGS.getString("Title_Invalid_Name"),
 						JOptionPane.WARNING_MESSAGE);
 				return false;
 			}
@@ -271,11 +335,16 @@ public class ImkerGUI extends ImkerBase {
 		return true;
 	}
 
+	/**
+	 * Try to download while blocking the UI with a modal dialog
+	 */
 	private static void download() {
 		try {
-			tracker(msgs.getString("Status_Downloading"),
-					msgs.getString("Hint_Downloading"),
-					msgs.getString("Text_Exit"), new SwingWorker<Void, Void>() {
+			progressBarDownload = new JProgressBar(0, fileNames.length);
+			progressBarDownload.setStringPainted(true);
+			executeWorker(MSGS.getString("Status_Downloading"),
+					MSGS.getString("Hint_Downloading"), progressBarDownload,
+					MSGS.getString("Text_Exit"), new SwingWorker<Void, Void>() {
 
 						@Override
 						protected Void doInBackground()
@@ -284,9 +353,9 @@ public class ImkerGUI extends ImkerBase {
 							return null;
 						}
 					});
-			STATUS_TEXT_FIELD.setText(msgs.getString("Status_Run_Complete"));
-			//
-			MAIN_BUTTON.setText(msgs.getString("Button_Reset"));
+			progressBarDownload = null;
+			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Run_Complete"));
+			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
 			state.setState(State.TERMINATED);
 		} catch (Exception e) {
 			terminate(e);
@@ -294,35 +363,59 @@ public class ImkerGUI extends ImkerBase {
 		}
 	}
 
+	/**
+	 * Set the state to State.PRE_INIT if the current state is State.TERMINATED
+	 * 
+	 * @param force
+	 *            ignore the current state
+	 */
 	private static void preInit(boolean force) {
 		if (!force && state.getState() == State.TERMINATED)
 			return;
-		STATUS_TEXT_FIELD.setText(msgs.getString("Status_Select_InOut"));
-		MAIN_BUTTON.setText(msgs.getString("Button_GetList"));
+		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Select_InOut"));
+		MAIN_BUTTON.setText(MSGS.getString("Button_GetList"));
 		fileNames = null;
 		state.setState(State.PRE_INIT);
 	}
 
+	/**
+	 * Fetch the file list
+	 * 
+	 * @throws FileNotFoundException
+	 *             if the local file is not found
+	 * @throws IOException
+	 *             if an IO issue occurs
+	 */
 	protected static void getFileNames() throws FileNotFoundException,
 			IOException {
 		if (CATEGORY_BUTTON.isSelected()) {
-			STATUS_TEXT_FIELD.setText(msgs.getString("Status_Get_Category")
+			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Category")
 					+ " ...");
 			boolean subcat = false;
 			// TODO: add argument to scan subcats
 			fileNames = wiki.getCategoryMembers(inputCategory, subcat,
 					Wiki.FILE_NAMESPACE);
 		} else if (PAGE_BUTTON.isSelected()) {
-			STATUS_TEXT_FIELD.setText(msgs.getString("Status_Get_Page")
+			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Page")
 					+ " ...");
 			fileNames = wiki.getImagesOnPage(inputPage);
 		} else { // fileButton.isSelected()
-			STATUS_TEXT_FIELD.setText(msgs.getString("Status_Parse_File")
+			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Parse_File")
 					+ " ...");
 			fileNames = parseFileNames(inputFile.getPath());
 		}
 	}
 
+	/**
+	 * Read the content from the textField
+	 * 
+	 * @param textField
+	 *            the textField to read from
+	 * @param updateCategory
+	 *            if the inputCategory should be updated or the inputPage;
+	 *            Warning: The textField MUST be the corresponding
+	 *            categoryTextField or pageTextField
+	 */
 	protected static void parseText(JTextField textField, boolean updateCategory) {
 		String newValue = textField.getText();
 		if (updateCategory) {
@@ -342,16 +435,21 @@ public class ImkerGUI extends ImkerBase {
 		preInit(false);
 	}
 
+	/**
+	 * Add the output options to the GUI
+	 * 
+	 * @param boxPane
+	 *            the GUI container
+	 */
 	private static void addOutputBox(Container boxPane) {
 		JPanel output = new JPanel(new BorderLayout(GAP, GAP));
-		output.setBorder(new TitledBorder(msgs.getString("Title_Output_Folder")));
+		output.setBorder(new TitledBorder(MSGS.getString("Title_Output_Folder")));
 		JPanel outputOptions = new JPanel(new BorderLayout(GAP, GAP));
 		outputOptions.setBorder(new EmptyBorder(GAP, GAP, GAP, GAP));
-		final JTextField currFolder;
-		currFolder = new JTextField(null, 28);
+		final JTextField currFolder = new JTextField();
 		currFolder.setEditable(false);
 		outputOptions.add(currFolder, BorderLayout.CENTER);
-		JButton folderSelect = new JButton(msgs.getString("Button_Choose"));
+		JButton folderSelect = new JButton(MSGS.getString("Button_Choose"));
 		folderSelect.addActionListener(new ActionListener() {
 
 			@Override
@@ -380,9 +478,15 @@ public class ImkerGUI extends ImkerBase {
 		boxPane.add(output);
 	}
 
+	/**
+	 * Add the input option to the GUI
+	 * 
+	 * @param boxPane
+	 *            the GUI container
+	 */
 	private static void addInputBox(Container boxPane) {
 		JPanel input = new JPanel(new BorderLayout(GAP, GAP));
-		input.setBorder(new TitledBorder(msgs.getString("Title_Source")));
+		input.setBorder(new TitledBorder(MSGS.getString("Title_Source")));
 
 		JPanel inputContainer = new JPanel(new BorderLayout(GAP, GAP));
 		inputContainer.setBorder(new EmptyBorder(GAP, GAP, GAP, GAP));
@@ -401,8 +505,8 @@ public class ImkerGUI extends ImkerBase {
 			}
 		});
 		radioButtons.add(CATEGORY_BUTTON);
-		CATEGORY_BUTTON.setToolTipText(msgs.getString("Hint_Src_Category"));
-		final JTextField categoryTextField = new JTextField(10);
+		CATEGORY_BUTTON.setToolTipText(MSGS.getString("Hint_Src_Category"));
+		final JTextField categoryTextField = new JTextField();
 		categoryTextField.addActionListener(new ActionListener() {
 
 			@Override
@@ -424,7 +528,7 @@ public class ImkerGUI extends ImkerBase {
 
 		});
 		values.add(categoryTextField);
-		categoryTextField.setToolTipText(msgs.getString("Hint_Src_Category"));
+		categoryTextField.setToolTipText(MSGS.getString("Hint_Src_Category"));
 
 		PAGE_BUTTON.addItemListener(new ItemListener() {
 
@@ -436,8 +540,8 @@ public class ImkerGUI extends ImkerBase {
 			}
 		});
 		radioButtons.add(PAGE_BUTTON);
-		PAGE_BUTTON.setToolTipText(msgs.getString("Hint_Src_Page"));
-		final JTextField pageTextField = new JTextField(10);
+		PAGE_BUTTON.setToolTipText(MSGS.getString("Hint_Src_Page"));
+		final JTextField pageTextField = new JTextField();
 		pageTextField.addActionListener(new ActionListener() {
 
 			@Override
@@ -461,7 +565,7 @@ public class ImkerGUI extends ImkerBase {
 			}
 		});
 		values.add(pageTextField);
-		pageTextField.setToolTipText(msgs.getString("Hint_Src_Page"));
+		pageTextField.setToolTipText(MSGS.getString("Hint_Src_Page"));
 
 		FILE_BUTTON.addItemListener(new ItemListener() {
 
@@ -473,16 +577,14 @@ public class ImkerGUI extends ImkerBase {
 			}
 		});
 		radioButtons.add(FILE_BUTTON);
-		FILE_BUTTON.setToolTipText(msgs.getString("Hint_File_Syntax"));
+		FILE_BUTTON.setToolTipText(MSGS.getString("Hint_File_Syntax"));
 		FILE_BUTTON.setEnabled(false);
-		final JTextField currFile;
-
-		currFile = new JTextField(null, 28);
+		final JTextField currFile = new JTextField();
 		currFile.setEditable(false);
-		currFile.setToolTipText(msgs.getString("Hint_File_Syntax"));
+		currFile.setToolTipText(MSGS.getString("Hint_File_Syntax"));
 		fileChoosePanel.add(currFile, BorderLayout.CENTER);
 
-		JButton infileSelect = new JButton(msgs.getString("Button_Choose"));
+		JButton infileSelect = new JButton(MSGS.getString("Button_Choose"));
 		infileSelect.addActionListener(new ActionListener() {
 
 			@Override
@@ -508,7 +610,7 @@ public class ImkerGUI extends ImkerBase {
 				}
 			}
 		});
-		infileSelect.setToolTipText(msgs.getString("Hint_File_Syntax"));
+		infileSelect.setToolTipText(MSGS.getString("Hint_File_Syntax"));
 		fileChoosePanel.add(infileSelect, BorderLayout.LINE_END);
 
 		values.add(fileChoosePanel);
@@ -525,9 +627,15 @@ public class ImkerGUI extends ImkerBase {
 		boxPane.add(input);
 	}
 
+	/**
+	 * Add status panel to the GUI
+	 * 
+	 * @param boxPane
+	 *            the GUI container
+	 */
 	private static void addStatusPanel(Container boxPane) {
 		JPanel statusPanel = new JPanel(new BorderLayout(GAP, GAP));
-		statusPanel.setBorder(new TitledBorder(msgs.getString("Title_Status")));
+		statusPanel.setBorder(new TitledBorder(MSGS.getString("Title_Status")));
 
 		STATUS_TEXT_FIELD.setEditable(false);
 		STATUS_TEXT_FIELD.setBorder(new EmptyBorder(GAP, GAP, GAP, GAP));
@@ -536,6 +644,12 @@ public class ImkerGUI extends ImkerBase {
 		boxPane.add(statusPanel);
 	}
 
+	/**
+	 * Add the main button to the GUI
+	 * 
+	 * @param boxPane
+	 *            the GUI container
+	 */
 	private static void addActionButton(Container boxPane) {
 		MAIN_BUTTON.setFont(new Font("Sans", Font.BOLD, 16));
 		MAIN_BUTTON.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -550,11 +664,19 @@ public class ImkerGUI extends ImkerBase {
 		boxPane.add(MAIN_BUTTON);
 	}
 
+	/**
+	 * Add the header with the logo to the GUI
+	 * 
+	 * @param boxPane
+	 *            the GUI container
+	 */
 	private static void addHeader(Container boxPane) {
 		Container logo = new Container();
 		logo.setLayout(new BoxLayout(logo, BoxLayout.X_AXIS));
 
 		JLabel picLabel = new JLabel(new ImageIcon("src/pics/logo-60.png"));
+		// TODO fallback
+		// TODO fonts
 		picLabel.setFont(new Font("Serif", Font.ITALIC, 40));
 		picLabel.setForeground(Color.BLUE);
 		logo.add(picLabel);
@@ -569,10 +691,13 @@ public class ImkerGUI extends ImkerBase {
 
 		Container description = new Container();
 		description.setLayout(new FlowLayout(FlowLayout.CENTER, GAP, GAP));
-		description.add(new JLabel(msgs.getString("Description_Program")));
+		description.add(new JLabel(MSGS.getString("Description_Program")));
 		boxPane.add(description);
 	}
 
+	/**
+	 * Create and show the GUI
+	 */
 	private static void createAndShowGUI() {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -616,11 +741,8 @@ public class ImkerGUI extends ImkerBase {
 		pane.add(boxPane);
 		pane.add(Box.createHorizontalStrut(GAP)); // right space
 
-		// Display the window.
 		FRAME.pack();
 		FRAME.setVisible(true);
-
-		// System.out.println(frame.getSize());
 	}
 
 	public static void main(String[] args) {

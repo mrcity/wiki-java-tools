@@ -194,7 +194,7 @@ public class ImkerCLI extends ImkerBase {
 				System.out.print(" [" + i + "]");
 			System.out.println("");
 			for (String i : expectedArgsDescription)
-				System.out.println(" ↳ " + i);
+				System.out.println(" \u21B3 " + i); // \u21B3 is unicode for ↳
 			System.exit(-1);
 		}
 	}

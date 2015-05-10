@@ -86,7 +86,6 @@ public class ImkerGUI extends ImkerBase {
 	private static State state = new State(State.PRE_INIT);
 	private static boolean hasSource = false;
 	private static boolean hasTarget = false;
-	private static JProgressBar progressBarDownload;
 
 	private static final int GAP = 12;
 
@@ -116,16 +115,19 @@ public class ImkerGUI extends ImkerBase {
 	 * status; Files already existing locally as well as files not found in the
 	 * remote are skipped!
 	 * 
+	 * @param progressBar
+	 *            the progress bar to track the download
+	 * 
 	 * @throws FileNotFoundException
 	 *             if the local file is not found (should never happen)
 	 * @throws IOException
 	 *             if a IO error occurs (network or file related)
 	 */
-	private static void downloadLoop() throws FileNotFoundException,
-			IOException {
+	private static void downloadLoop(JProgressBar progressBar)
+			throws FileNotFoundException, IOException {
 		for (int i = 0; i < fileNames.length; i++) {
 			String fileName = fileNames[i].substring("File:".length());
-			progressBarDownload.setValue(i);
+			progressBar.setValue(i);
 			STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/" + fileNames.length
 					+ "): " + fileName);
 			File outputFile = new File(outputFolder.getPath() + File.separator
@@ -136,7 +138,7 @@ public class ImkerGUI extends ImkerBase {
 				continue;
 			}
 			boolean downloaded = wiki.getImage(fileName, outputFile);
-			if (downloaded == false) {
+			if (!downloaded) {
 				STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
 						+ MSGS.getString("Status_File_Not_Found"));
 				continue;
@@ -221,7 +223,7 @@ public class ImkerGUI extends ImkerBase {
 	}
 
 	/**
-	 * Execute the worker and disable interaction by the modal dialog during the
+	 * Execute the worker and disable interaction by a modal dialog during
 	 * execution; Exit when an InterruptedException occurs, otherwise Exceptions
 	 * are thrown
 	 * 
@@ -341,7 +343,8 @@ public class ImkerGUI extends ImkerBase {
 	 */
 	private static void download() {
 		try {
-			progressBarDownload = new JProgressBar(0, fileNames.length);
+			final JProgressBar progressBarDownload = new JProgressBar(0,
+					fileNames.length);
 			progressBarDownload.setStringPainted(true);
 			executeWorker(MSGS.getString("Status_Downloading"),
 					MSGS.getString("Hint_Downloading"), progressBarDownload,
@@ -350,11 +353,10 @@ public class ImkerGUI extends ImkerBase {
 						@Override
 						protected Void doInBackground()
 								throws FileNotFoundException, IOException {
-							downloadLoop();
+							downloadLoop(progressBarDownload);
 							return null;
 						}
 					});
-			progressBarDownload = null;
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Run_Complete"));
 			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
 			state.setState(State.TERMINATED);
@@ -365,7 +367,7 @@ public class ImkerGUI extends ImkerBase {
 	}
 
 	/**
-	 * Set the state to State.PRE_INIT if the current state is State.TERMINATED
+	 * Set the state to State.PRE_INIT if the current state is not State.TERMINATED
 	 * 
 	 * @param force
 	 *            ignore the current state

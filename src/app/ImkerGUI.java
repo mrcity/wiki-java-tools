@@ -21,6 +21,8 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -126,18 +128,24 @@ public class ImkerGUI extends ImkerBase {
 	private static void downloadLoop(JProgressBar progressBar)
 			throws FileNotFoundException, IOException {
 		for (int i = 0; i < fileNames.length; i++) {
-			String fileName = fileNames[i].substring("File:".length());
+			final String fileName = fileNames[i].substring("File:".length());
 			progressBar.setValue(i);
 			STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/" + fileNames.length
 					+ "): " + fileName);
-			File outputFile = new File(outputFolder.getPath() + File.separator
-					+ fileName);
+			final File outputFile = new File(outputFolder.getPath()
+					+ File.separator + fileName);
 			if (outputFile.exists()) {
 				STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
 						+ MSGS.getString("Status_File_Exists"));
 				continue;
 			}
-			boolean downloaded = wiki.getImage(fileName, outputFile);
+			boolean downloaded = (boolean) attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException {
+					return wiki.getImage(fileName, outputFile);
+				}
+			}, MAX_FAILS);
 			if (!downloaded) {
 				STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
 						+ MSGS.getString("Status_File_Not_Found"));
@@ -206,9 +214,14 @@ public class ImkerGUI extends ImkerBase {
 	 *            the exception that occurred
 	 */
 	private static void terminate(Exception e) {
+		String title = "[Imker] Exception";
+		try {
+			title = URLEncoder.encode(title, "UTF-8");
+		} catch (UnsupportedEncodingException ignore) {
+		}
 		JTextArea ep = new JTextArea(e.toString() + "\n"
 				+ MSGS.getString("Hint_Github_Issue") + "\n"
-				+ githubIssueTracker);
+				+ String.format(githubIssueTracker, title, ""));
 		ep.setEditable(false);
 		ep.setFocusable(true);
 		ep.setFont(new JLabel().getFont());
@@ -367,7 +380,8 @@ public class ImkerGUI extends ImkerBase {
 	}
 
 	/**
-	 * Set the state to State.PRE_INIT if the current state is not State.TERMINATED
+	 * Set the state to State.PRE_INIT if the current state is not
+	 * State.TERMINATED
 	 * 
 	 * @param force
 	 *            ignore the current state
@@ -394,14 +408,26 @@ public class ImkerGUI extends ImkerBase {
 		if (CATEGORY_BUTTON.isSelected()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Category")
 					+ " ...");
-			boolean subcat = false;
-			// TODO: add argument to scan subcats
-			fileNames = wiki.getCategoryMembers(inputCategory, subcat,
-					Wiki.FILE_NAMESPACE);
+			fileNames = (String[]) attemptFetch(new WikiAPI() {
+
+				@Override
+				public String[] fetch() throws IOException {
+					// TODO: add argument to scan subcats
+					boolean subcat = false;
+					return wiki.getCategoryMembers(inputCategory, subcat,
+							Wiki.FILE_NAMESPACE);
+				}
+			}, MAX_FAILS);
 		} else if (PAGE_BUTTON.isSelected()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Page")
 					+ " ...");
-			fileNames = wiki.getImagesOnPage(inputPage);
+			fileNames = (String[]) attemptFetch(new WikiAPI() {
+
+				@Override
+				public String[] fetch() throws IOException {
+					return wiki.getImagesOnPage(inputPage);
+				}
+			}, MAX_FAILS);
 		} else { // fileButton.isSelected()
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Parse_File")
 					+ " ...");

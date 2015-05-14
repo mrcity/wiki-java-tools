@@ -121,17 +121,30 @@ public class ImkerCLI extends ImkerBase {
 		int pageIndex = inputArg.indexOf(PAGE_PARAM);
 		int fileIndex = inputArg.indexOf(FILE_PARAM);
 
+		final String arg;
 		if (catIndex > 0) {
-			boolean subcat = false; // TODO: add argument --subcat
-			catIndex += CATEGORY_PARAM.length();
-			return wiki.getCategoryMembers(inputArg.substring(catIndex),
-					subcat, Wiki.FILE_NAMESPACE);
+			arg = inputArg.substring(catIndex + CATEGORY_PARAM.length());
+			return (String[]) attemptFetch(new WikiAPI() {
+
+				@Override
+				public String[] fetch() throws IOException {
+					boolean subcat = false; // TODO: add argument --subcat
+					return wiki.getCategoryMembers(arg, subcat,
+							Wiki.FILE_NAMESPACE);
+				}
+			}, MAX_FAILS);
 		} else if (pageIndex > 0) {
-			pageIndex += PAGE_PARAM.length();
-			return wiki.getImagesOnPage(inputArg.substring(pageIndex));
+			arg = inputArg.substring(pageIndex + PAGE_PARAM.length());
+			return (String[]) attemptFetch(new WikiAPI() {
+
+				@Override
+				public String[] fetch() throws IOException {
+					return wiki.getImagesOnPage(arg);
+				}
+			}, MAX_FAILS);
 		} else if (fileIndex > 0) {
-			fileIndex += FILE_PARAM.length();
-			return readFileNames(inputArg.substring(fileIndex));
+			arg = inputArg.substring(fileIndex + FILE_PARAM.length());
+			return readFileNames(arg);
 		} else {
 			// exit and warn user
 			printHelp(null);

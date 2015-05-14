@@ -12,10 +12,21 @@ import java.util.ResourceBundle;
 
 import wiki.Wiki;
 
+interface WikiAPI {
+	/**
+	 * Fetch something from the WikiAPI
+	 * 
+	 * @return the result from the API
+	 * @throws IOException
+	 *             if a network issue occurs
+	 */
+	Object fetch() throws IOException;
+}
+
 public class ImkerBase {
-	protected static final String VERSION = "v15.05.08";
+	protected static final String VERSION = "v15.05.12";
 	protected static final String PROGRAM_NAME = "Imker";
-	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new";
+	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
 			">", "[", "]", "|" };
 	protected static Wiki wiki = null;
@@ -23,6 +34,8 @@ public class ImkerBase {
 	protected static File outputFolder = null;
 	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
 			"i18n/Bundle", Locale.getDefault());
+	protected static final int MAX_FAILS = 3;
+	private static final int EXCEPTION_SLEEP_TIME = 30 * 1000; // ms
 
 	/**
 	 * Read the given file and extract valid file names in each line
@@ -51,6 +64,36 @@ public class ImkerBase {
 		}
 		String[] tempStringArray = { "" };
 		return FileNameQueue.toArray(tempStringArray);
+	}
+
+	/**
+	 * Attempt to fetch from the given api a maximum of maxFails and wait some
+	 * time (max EXCEPTION_SLEEP_TIME) between tries.
+	 * 
+	 * @param api
+	 *            the API to fetch from
+	 * @param maxFails
+	 *            the maximum number of exceptions to tolerate
+	 * @return the result from the API
+	 * @throws IOException
+	 *             when a network error occurs
+	 */
+	protected static Object attemptFetch(WikiAPI api, int maxFails)
+			throws IOException {
+		maxFails--;
+		try {
+			return api.fetch();
+		} catch (IOException e) {
+			if (maxFails == 0) {
+				throw e;
+			} else {
+				try {
+					Thread.sleep(EXCEPTION_SLEEP_TIME / (maxFails * maxFails));
+				} catch (InterruptedException ignore) {
+				}
+				return attemptFetch(api, maxFails);
+			}
+		}
 	}
 
 	/**

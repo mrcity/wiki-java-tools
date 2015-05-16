@@ -1,5 +1,6 @@
 package app;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -104,7 +105,11 @@ class TopBotThread extends Thread {
 		String title = "Top " + number + " "
 				+ WikiPage.firstCharToLowerCase(category);
 		String separator = "<!-- Only text ABOVE this line will be preserved on updates -->";
-		String[] splittedText = wiki.getPageText(title).split(separator);
+		String[] splittedText = { "" };
+		try {
+			splittedText = wiki.getPageText(title).split(separator);
+		} catch (FileNotFoundException ignore) {
+		}
 		wiki.edit(title, (splittedText.length == 1 ? "" : splittedText[0])
 				+ separator + "\n" + text, "Update");
 	}
@@ -125,7 +130,7 @@ public class TopBot {
 
 	public static void main(String[] args) {
 
-		System.out.println("v15.05.16");
+		System.out.println("v15.05.17");
 
 		String[] expectedArgs = { "username" };
 		String[] expectedArgsDescription = { "username is your username on the wiki." };

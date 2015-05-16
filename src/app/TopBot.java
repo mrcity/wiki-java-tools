@@ -125,7 +125,7 @@ public class TopBot {
 
 	public static void main(String[] args) {
 
-		System.out.println("v15.04.26");
+		System.out.println("v15.05.16");
 
 		String[] expectedArgs = { "username" };
 		String[] expectedArgsDescription = { "username is your username on the wiki." };
@@ -154,13 +154,17 @@ public class TopBot {
 					+ "Processing the following categories:" + "\n");
 			String[] cats = {
 					"chemical images that should use vector graphics",
+					"chemistry images that should use vector graphics",
+					"biology images that should use vector graphics",
+					"technology images that should use vector graphics",
 					"map images that should use vector graphics",
 					"coat of arms images that should use vector graphics",
 					"symbol images that should use vector graphics",
 					"diagram images that should use vector graphics",
 					"logo images that should use vector graphics",
 					"flag images that should use vector graphics" };
-			String[] subCats = { "images that should use vector graphics" };
+			String[] subCats = { "images that should use vector graphics",
+					"math images that should use vector graphics" };
 			for (String cat : cats) {
 				System.out.println("Category:" + cat);
 			}

@@ -13,6 +13,7 @@ import java.util.ResourceBundle;
 import wiki.Wiki;
 
 interface WikiAPI {
+
 	/**
 	 * Fetch something from the WikiAPI
 	 * 
@@ -23,8 +24,29 @@ interface WikiAPI {
 	Object fetch() throws IOException;
 }
 
+interface DownloadStatusHandler {
+
+	/**
+	 * Handle the status for the initial step
+	 * 
+	 * @param i
+	 *            the current index of the file about to download
+	 * @param fileName
+	 *            the name of the file about to download
+	 */
+	void handle1(int i, String fileName);
+
+	/**
+	 * Handle the status for the last step of the file download
+	 * 
+	 * @param status
+	 *            Can be something like "... saved" or "... exists"
+	 */
+	void handle2(String status);
+}
+
 public class ImkerBase {
-	protected static final String VERSION = "v15.05.12";
+	protected static final String VERSION = "v15.05.14";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
@@ -93,6 +115,40 @@ public class ImkerBase {
 				}
 				return attemptFetch(api, maxFails);
 			}
+		}
+	}
+
+	/**
+	 * Loop over all file names and call the StatusHandler; Files already
+	 * existing locally as well as files not found in the remote are skipped!
+	 * 
+	 * @param sh
+	 *            the status handler to call
+	 * @throws IOException
+	 *             if an io error (network or file related) occurs
+	 */
+	protected static void downloadLoop(DownloadStatusHandler sh) throws IOException {
+		for (int i = 0; i < fileNames.length; i++) {
+			final String fileName = fileNames[i].substring("File:".length());
+			sh.handle1(i, fileName);
+			final File outputFile = new File(outputFolder.getPath()
+					+ File.separator + fileName);
+			if (outputFile.exists()) {
+				sh.handle2(" ... " + MSGS.getString("Status_File_Exists"));
+				continue;
+			}
+			boolean downloaded = (boolean) attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException {
+					return wiki.getImage(fileName, outputFile);
+				}
+			}, MAX_FAILS);
+			if (downloaded == false) {
+				sh.handle2(" ... " + MSGS.getString("Status_File_Not_Found"));
+				continue;
+			}
+			sh.handle2(" ... " + MSGS.getString("Status_File_Saved"));
 		}
 	}
 

@@ -51,25 +51,20 @@ public class ImkerCLI extends ImkerBase {
 				+ MSGS.getString("Prompt_Enter"));
 		System.in.read();
 
-		for (int i = 0; i < fileNames.length; i++) {
-			String fileName = fileNames[i].substring("File:".length());
-			System.out.println("(" + (i + 1) + "/" + fileNames.length + "): "
-					+ fileName);
-			File outputFile = new File(outputFolder.getPath() + File.separator
-					+ fileName);
-			if (outputFile.exists()) {
-				System.out.println(" ... "
-						+ MSGS.getString("Status_File_Exists"));
-				continue;
+		downloadLoop(new DownloadStatusHandler() {
+
+			@Override
+			public void handle1(int i, String fileName) {
+				System.out.println("(" + (i + 1) + "/" + fileNames.length
+						+ "): " + fileName);
 			}
-			boolean downloaded = wiki.getImage(fileName, outputFile);
-			if (downloaded == false) {
-				System.out.println(" ... "
-						+ MSGS.getString("Status_File_Not_Found"));
-				continue;
+
+			@Override
+			public void handle2(String status2) {
+				System.out.println(status2);
 			}
-			System.out.println(" ... " + MSGS.getString("Status_File_Saved"));
-		}
+		});
+
 		System.out.println("\n" + MSGS.getString("Status_Run_Complete"));
 	}
 
@@ -95,7 +90,7 @@ public class ImkerCLI extends ImkerBase {
 		if (folder.isDirectory()) {
 			return folder;
 		} else {
-			System.out.println(MSGS.getString("Status_Not_A Folder") + " "
+			System.out.println(MSGS.getString("Status_Not_A_Folder") + " "
 					+ path);
 			System.exit(-1);
 			return null;

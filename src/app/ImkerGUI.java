@@ -113,50 +113,6 @@ public class ImkerGUI extends ImkerBase {
 	}
 
 	/**
-	 * Loop over all file names, update the download progress bar and update the
-	 * status; Files already existing locally as well as files not found in the
-	 * remote are skipped!
-	 * 
-	 * @param progressBar
-	 *            the progress bar to track the download
-	 * 
-	 * @throws FileNotFoundException
-	 *             if the local file is not found (should never happen)
-	 * @throws IOException
-	 *             if a IO error occurs (network or file related)
-	 */
-	private static void downloadLoop(JProgressBar progressBar)
-			throws FileNotFoundException, IOException {
-		for (int i = 0; i < fileNames.length; i++) {
-			final String fileName = fileNames[i].substring("File:".length());
-			progressBar.setValue(i);
-			STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/" + fileNames.length
-					+ "): " + fileName);
-			final File outputFile = new File(outputFolder.getPath()
-					+ File.separator + fileName);
-			if (outputFile.exists()) {
-				STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
-						+ MSGS.getString("Status_File_Exists"));
-				continue;
-			}
-			boolean downloaded = (boolean) attemptFetch(new WikiAPI() {
-
-				@Override
-				public Object fetch() throws IOException {
-					return wiki.getImage(fileName, outputFile);
-				}
-			}, MAX_FAILS);
-			if (!downloaded) {
-				STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
-						+ MSGS.getString("Status_File_Not_Found"));
-				continue;
-			}
-			STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD.getText() + " ... "
-					+ MSGS.getString("Status_File_Saved"));
-		}
-	}
-
-	/**
 	 * Terminate on invalid input; Otherwise try to fetch the file list while
 	 * blocking the UI with a pop up
 	 */
@@ -366,7 +322,23 @@ public class ImkerGUI extends ImkerBase {
 						@Override
 						protected Void doInBackground()
 								throws FileNotFoundException, IOException {
-							downloadLoop(progressBarDownload);
+							downloadLoop(new DownloadStatusHandler() {
+
+								@Override
+								public void handle1(int i, String fileName) {
+									progressBarDownload.setValue(i);
+									STATUS_TEXT_FIELD.setText("(" + (i + 1)
+											+ "/" + fileNames.length + "): "
+											+ fileName);
+								}
+
+								@Override
+								public void handle2(String status) {
+									STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
+											.getText() + status);
+								}
+
+							});
 							return null;
 						}
 					});

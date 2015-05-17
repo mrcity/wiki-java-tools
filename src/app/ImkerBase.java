@@ -46,7 +46,7 @@ interface DownloadStatusHandler {
 }
 
 public class ImkerBase {
-	protected static final String VERSION = "v15.05.14";
+	protected static final String VERSION = "v15.05.15";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
@@ -72,6 +72,7 @@ public class ImkerBase {
 	 */
 	protected static String[] parseFileNames(String localFilePath)
 			throws FileNotFoundException, IOException {
+		// TODO resolve redirects
 		Queue<String> FileNameQueue = new LinkedList<String>();
 
 		try (BufferedReader br = new BufferedReader(new FileReader(
@@ -153,7 +154,7 @@ public class ImkerBase {
 	}
 
 	/**
-	 * Discard invalid file names and normalize the other.
+	 * Discard invalid file names and normalize the others.
 	 * 
 	 * @param line
 	 *            the String to be normalized

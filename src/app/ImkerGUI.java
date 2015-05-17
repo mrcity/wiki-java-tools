@@ -334,8 +334,9 @@ public class ImkerGUI extends ImkerBase {
 
 								@Override
 								public void handle2(String status) {
-									STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
-											.getText() + status);
+									// TODO invisible (instant redraw)
+									// STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
+									// .getText() + status);
 								}
 
 							});

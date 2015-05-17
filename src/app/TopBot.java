@@ -1,6 +1,5 @@
 package app;
 
-import java.awt.List;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -20,12 +19,25 @@ class TopBotThread extends Thread {
 	private String category;
 	private int exceptions;
 
+	/**
+	 * Create a thread which can crawl a category and count each member's global
+	 * usage
+	 * 
+	 * @param wiki
+	 *            the wiki to connect to
+	 * @param category
+	 *            the category to crawl
+	 */
 	public TopBotThread(Wiki wiki, String category) {
 		this.wiki = wiki;
 		this.category = category;
 		exceptions = 0;
 	}
 
+	/**
+	 * Try to crawl the category and return right after the second exception
+	 * occurs
+	 */
 	public void run() {
 		if (exceptions == 2) {
 			System.out.println(this.getName() + " shut down after "
@@ -99,6 +111,19 @@ class TopBotThread extends Thread {
 				+ TopBot.SEPARATOR + "\n" + text, "Update");
 	}
 
+	/**
+	 * Scan in several subcategories for the members of valid
+	 * "TopBot.ROOT_CATEGORY"-categories
+	 * 
+	 * @param wiki
+	 *            the wiki to connect to
+	 * @param category
+	 *            the category (and it's subcategories) to scan
+	 * @return string array holding all members of the given category and
+	 *         members of valid subcategories
+	 * @throws IOException
+	 *             if a network error occurs
+	 */
 	private String[] getAllCategoryMembers(Wiki wiki, String category)
 			throws IOException {
 		int depth = 5;
@@ -111,8 +136,18 @@ class TopBotThread extends Thread {
 						.getCategoryMembers(cat, false, Wiki.FILE_NAMESPACE)));
 			}
 		}
+		allCategoryMembers.addAll(Arrays.asList(wiki.getCategoryMembers(
+				category, false, Wiki.FILE_NAMESPACE)));
+		return allCategoryMembers.toArray(new String[0]);
 	}
 
+	/**
+	 * Calculate the global usage only in the main namespace
+	 * 
+	 * @param globalUsage
+	 *            the list of globalusage returned by the wiki java api
+	 * @return the global usage count in the main namespace
+	 */
 	private int getActualUsageCount(String[][] globalUsage) {
 		int count = 0;
 		for (String[] usage : globalUsage) {
@@ -130,10 +165,11 @@ public class TopBot {
 	public static final String ROOT_CATEGORY = "images that should use vector graphics";
 	public static final int NUMBER = 200;
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
+	public static final String VERSION = "v15.05.20";
 
 	public static void main(String[] args) {
 
-		System.out.println("v15.05.19");
+		System.out.println(VERSION);
 
 		String[] expectedArgs = { "username" };
 		String[] expectedArgsDescription = { "username is your username on the wiki." };
@@ -160,7 +196,7 @@ public class TopBot {
 
 			System.out.println("Fetching categories");
 
-			String[] cats = getSvgCategories(commons, ROOT_CATEGORY);
+			String[] cats = getSvgCategories(commons);
 
 			System.out.println("\n\n========\n\n"
 					+ "Processing the following categories:" + "\n");
@@ -181,15 +217,23 @@ public class TopBot {
 		}
 	}
 
-	private static String[] getSvgCategories(Wiki commons, String parentCat)
-			throws IOException {
-		String[] allCategories = commons.getCategoryMembers(parentCat, false,
+	/**
+	 * Determine the categories which should be crawled
+	 * 
+	 * @param wiki
+	 *            the wiki to connect to
+	 * @return all categories which end in "ROOT_CATEGORY"
+	 * @throws IOException
+	 *             if a network error occurs
+	 */
+	private static String[] getSvgCategories(Wiki wiki) throws IOException {
+		String[] allCategories = wiki.getCategoryMembers(ROOT_CATEGORY, false,
 				Wiki.CATEGORY_NAMESPACE);
 		ArrayList<String> allSvgCategories = new ArrayList<String>(
 				allCategories.length + 1);
-		allSvgCategories.add(parentCat);
+		allSvgCategories.add(ROOT_CATEGORY);
 		for (String cat : allCategories) {
-			if (cat.endsWith(parentCat))
+			if (cat.endsWith(ROOT_CATEGORY))
 				allSvgCategories.add(cat);
 		}
 		return allSvgCategories.toArray(new String[0]);

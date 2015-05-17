@@ -26,11 +26,11 @@ class TopBotThread extends Thread {
 	 * @param wiki
 	 *            the wiki to connect to
 	 * @param category
-	 *            the category to crawl
+	 *            the category to crawl (may or may not start with "Category:")
 	 */
 	public TopBotThread(Wiki wiki, String category) {
 		this.wiki = wiki;
-		this.category = category;
+		this.category = category.replaceFirst("(?i)^Category:", "");
 		exceptions = 0;
 	}
 
@@ -165,7 +165,7 @@ public class TopBot {
 	public static final String ROOT_CATEGORY = "images that should use vector graphics";
 	public static final int NUMBER = 200;
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.05.20";
+	public static final String VERSION = "v15.05.22";
 
 	public static void main(String[] args) {
 
@@ -194,14 +194,14 @@ public class TopBot {
 			commons.setMarkBot(false);
 			commons.setLogLevel(Level.WARNING);
 
-			System.out.println("Fetching categories");
+			System.out.println("Fetching categories ...");
 
 			String[] cats = getSvgCategories(commons);
 
 			System.out.println("\n\n========\n\n"
 					+ "Processing the following categories:" + "\n");
 			for (String cat : cats) {
-				System.out.println("Category:" + cat);
+				System.out.println(cat);
 			}
 			System.out.println("\n========\n\n");
 			Thread.sleep(1000);
@@ -222,7 +222,8 @@ public class TopBot {
 	 * 
 	 * @param wiki
 	 *            the wiki to connect to
-	 * @return all categories which end in "ROOT_CATEGORY"
+	 * @return all categories which end in "ROOT_CATEGORY" and are direct
+	 *         children of "ROOT_CATEGORY"
 	 * @throws IOException
 	 *             if a network error occurs
 	 */
@@ -231,7 +232,7 @@ public class TopBot {
 				Wiki.CATEGORY_NAMESPACE);
 		ArrayList<String> allSvgCategories = new ArrayList<String>(
 				allCategories.length + 1);
-		allSvgCategories.add(ROOT_CATEGORY);
+		allSvgCategories.add("Category:" + ROOT_CATEGORY);
 		for (String cat : allCategories) {
 			if (cat.endsWith(ROOT_CATEGORY))
 				allSvgCategories.add(cat);

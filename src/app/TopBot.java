@@ -1,5 +1,6 @@
 package app;
 
+import java.awt.List;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
@@ -18,13 +19,10 @@ class TopBotThread extends Thread {
 	private Wiki wiki;
 	private String category;
 	private int exceptions;
-	private boolean scanSubCats;
-	final private int number = 200;
 
-	public TopBotThread(Wiki wiki, String category, boolean scanSubCats) {
+	public TopBotThread(Wiki wiki, String category) {
 		this.wiki = wiki;
 		this.category = category;
-		this.scanSubCats = scanSubCats;
 		exceptions = 0;
 	}
 
@@ -60,19 +58,7 @@ class TopBotThread extends Thread {
 	 * @throws LoginException
 	 */
 	private void crawlCategory() throws IOException, LoginException {
-		String[] members;
-		if (!scanSubCats)
-			members = wiki.getCategoryMembers(category, false, 6);
-		else {
-			ArrayList<String> membersTemp = new ArrayList<String>();
-			String[] subCats = wiki.getCategoryMembers(category, false,
-					Wiki.CATEGORY_NAMESPACE);
-			for (String subCat : subCats) {
-				membersTemp.addAll(Arrays.asList(wiki.getCategoryMembers(
-						subCat, false, 6)));
-			}
-			members = membersTemp.toArray(new String[membersTemp.size()]);
-		}
+		String[] members = getAllCategoryMembers(wiki, category);
 		Comparable[][] cArray = new Comparable[members.length][2];
 
 		for (int i = 0; i < members.length; ++i) {
@@ -94,7 +80,7 @@ class TopBotThread extends Thread {
 						Calendar.getInstance().getTime()) + "." + "\n"
 				+ "\nCounting only the usage in the main namespace:\n\n"
 				+ "<gallery showfilename=yes >\n";
-		for (int i = 0; i < Math.min(number, members.length); i++) {
+		for (int i = 0; i < Math.min(TopBot.NUMBER, members.length); i++) {
 			text = text + cArray[i][0] + "|" + (i + 1) + ". Used "
 					+ cArray[i][1] + " times.\n";
 		}
@@ -102,16 +88,29 @@ class TopBotThread extends Thread {
 				+ "\n[[Category:Images that should use vector graphics]]"
 				+ "\n[[Category:" + WikiPage.firstCharToUpperCase(category)
 				+ "]]";
-		String title = "Top " + number + " "
+		String title = "Top " + TopBot.NUMBER + " "
 				+ WikiPage.firstCharToLowerCase(category);
-		String separator = "<!-- Only text ABOVE this line will be preserved on updates -->";
 		String[] splittedText = { "" };
 		try {
-			splittedText = wiki.getPageText(title).split(separator);
+			splittedText = wiki.getPageText(title).split(TopBot.SEPARATOR);
 		} catch (FileNotFoundException ignore) {
 		}
 		wiki.edit(title, (splittedText.length == 1 ? "" : splittedText[0])
-				+ separator + "\n" + text, "Update");
+				+ TopBot.SEPARATOR + "\n" + text, "Update");
+	}
+
+	private String[] getAllCategoryMembers(Wiki wiki, String category)
+			throws IOException {
+		int depth = 5;
+		String[] possibleCats = wiki.getCategoryMembers(category, depth,
+				Wiki.CATEGORY_NAMESPACE);
+		ArrayList<String> allCategoryMembers = new ArrayList<String>();
+		for (String cat : possibleCats) {
+			if (cat.endsWith(TopBot.ROOT_CATEGORY)) {
+				allCategoryMembers.addAll(Arrays.asList(wiki
+						.getCategoryMembers(cat, false, Wiki.FILE_NAMESPACE)));
+			}
+		}
 	}
 
 	private int getActualUsageCount(String[][] globalUsage) {
@@ -128,9 +127,13 @@ class TopBotThread extends Thread {
 
 public class TopBot {
 
+	public static final String ROOT_CATEGORY = "images that should use vector graphics";
+	public static final int NUMBER = 200;
+	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
+
 	public static void main(String[] args) {
 
-		System.out.println("v15.05.17");
+		System.out.println("v15.05.19");
 
 		String[] expectedArgs = { "username" };
 		String[] expectedArgsDescription = { "username is your username on the wiki." };
@@ -155,47 +158,41 @@ public class TopBot {
 			commons.setMarkBot(false);
 			commons.setLogLevel(Level.WARNING);
 
+			System.out.println("Fetching categories");
+
+			String[] cats = getSvgCategories(commons, ROOT_CATEGORY);
+
 			System.out.println("\n\n========\n\n"
 					+ "Processing the following categories:" + "\n");
-			String[] cats = {
-					"chemical images that should use vector graphics",
-					"chemistry images that should use vector graphics",
-					"biology images that should use vector graphics",
-					"technology images that should use vector graphics",
-					"map images that should use vector graphics",
-					"coat of arms images that should use vector graphics",
-					"symbol images that should use vector graphics",
-					"diagram images that should use vector graphics",
-					"logo images that should use vector graphics",
-					"flag images that should use vector graphics" };
-			String[] subCats = { "images that should use vector graphics",
-					"math images that should use vector graphics" };
 			for (String cat : cats) {
 				System.out.println("Category:" + cat);
-			}
-			for (String cat : subCats) {
-				System.out.println("Category:" + cat
-						+ " (AND DIRECT SUBCATEGORIES)");
 			}
 			System.out.println("\n========\n\n");
 			Thread.sleep(1000);
 			// Create threads
 
-			TopBotThread[] threads = new TopBotThread[cats.length
-					+ subCats.length];
-			int i = 0;
-			for (; i < cats.length; i++) {
-				threads[i] = new TopBotThread(commons, cats[i], false);
+			TopBotThread[] threads = new TopBotThread[cats.length];
+			for (int i = 0; i < cats.length; i++) {
+				threads[i] = new TopBotThread(commons, cats[i]);
 				threads[i].start();
 			}
-			for (; i < threads.length; i++) {
-				threads[i] = new TopBotThread(commons,
-						subCats[i - cats.length], true);
-				threads[i].start();
-			}
-
 		} catch (LoginException | IOException | InterruptedException e) {
 			e.printStackTrace();
 		}
 	}
+
+	private static String[] getSvgCategories(Wiki commons, String parentCat)
+			throws IOException {
+		String[] allCategories = commons.getCategoryMembers(parentCat, false,
+				Wiki.CATEGORY_NAMESPACE);
+		ArrayList<String> allSvgCategories = new ArrayList<String>(
+				allCategories.length + 1);
+		allSvgCategories.add(parentCat);
+		for (String cat : allCategories) {
+			if (cat.endsWith(parentCat))
+				allSvgCategories.add(cat);
+		}
+		return allSvgCategories.toArray(new String[0]);
+	}
+
 }

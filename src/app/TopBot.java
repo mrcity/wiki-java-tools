@@ -171,7 +171,7 @@ class CategoryTree extends Category {
 	 * report; This method also adds this category in all cases; Duplicates are
 	 * removed
 	 * 
-	 * @return
+	 * @return the category groups as a LinkedList holding the root nodes
 	 */
 	LinkedList<Category> getReportCategories() {
 		if (reportCategories == null) {
@@ -289,7 +289,7 @@ class TopBotThread extends Thread {
 			info += "* " + kid.toString(compressed, prefix, suffix) + "\n";
 			total += kid.getFileMembers().length;
 		}
-		return info + "Total number of scanned files: " + total + "\n";
+		return info + "\n" + "Total number of scanned files: " + total + "\n";
 	}
 
 	/**
@@ -348,13 +348,13 @@ class TopBotThread extends Thread {
 
 		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddhhmmss");
 		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"),
-				Locale.US);
+				Locale.UK);
 		Date twoWeeksFromNow = now.getTime();
 		twoWeeksFromNow.setDate(now.getTime().getDate() + 14);
 		String text = "{{#ifexpr:{{CURRENTTIMESTAMP}}>"
 				+ timestamp.format(twoWeeksFromNow)
 				+ "|{{speedy|Outdated report, which was replaced by "
-				+ "a fresh one through [[user:{{REVISIONUSER}}]].}}|}}"
+				+ "a fresh one through [[user:{{subst:REVISIONUSER}}]].}}|}}"
 				+ "\nLast update: "
 				+ DateFormat.getDateInstance(DateFormat.FULL).format(
 						now.getTime()) + "." + "\n"
@@ -369,7 +369,8 @@ class TopBotThread extends Thread {
 		text = text
 				+ "</gallery>"
 				+ (members.size() < TopBot.TARGET_COUNT ? "" : "\n[[Category:"
-						+ TopBot.ROOT_CATEGORY + "]]") + "\n[[Category:"
+						+ WikiPage.firstCharToUpperCase(TopBot.ROOT_CATEGORY)
+						+ "]]") + "\n[[Category:"
 				+ WikiPage.firstCharToUpperCase(categoryName) + "]]";
 		String title = "Top " + TopBot.TARGET_COUNT + " "
 				+ WikiPage.firstCharToLowerCase(categoryName);
@@ -432,7 +433,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.05.25";
+	public static final String VERSION = "v15.05.26";
 
 	public static void main(String[] args) {
 

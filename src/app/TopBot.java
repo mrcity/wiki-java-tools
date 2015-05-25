@@ -3,12 +3,14 @@ package app;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
-import java.util.ArrayList;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.logging.Level;
 
 import javax.security.auth.login.LoginException;
@@ -31,7 +33,7 @@ class Category {
 	 * @param children
 	 *            the children of the category or null
 	 * @param fileMembers
-	 *            the members which are files
+	 *            the members of this category which are files
 	 */
 	Category(String name, Category[] children, String[] fileMembers) {
 		this.name = CATEGORY_PREFIX
@@ -54,7 +56,7 @@ class Category {
 	/**
 	 * Return the children of this category
 	 * 
-	 * @return the array of children or null
+	 * @return the array of children
 	 */
 	Category[] getChildren() {
 		return children;
@@ -63,22 +65,32 @@ class Category {
 	/**
 	 * Return the members of this category which are in the file namespace
 	 * 
-	 * @return the number of file members
+	 * @return the file members
 	 */
 	String[] getFileMembers() {
 		return fileMembers;
 	}
 
+	/**
+	 * Create a String representation of this category in the form of
+	 * prefix+name+suffix+numberOfFiles
+	 * 
+	 * @param shortString
+	 *            determines if a very compressed String is returned
+	 * @param prefix
+	 *            the prefix of the reurned string
+	 * @param suffix
+	 *            comes after the name
+	 * @return the string
+	 */
 	String toString(boolean shortString, String prefix, String suffix) {
-		String temp;
 		if (shortString)
-			temp = this.getName().substring(CATEGORY_PREFIX.length())
+			return this.getName().substring(CATEGORY_PREFIX.length())
 					.replaceAll("(?i)" + TopBot.ROOT_CATEGORY, "")
 					+ "(" + this.getFileMembers().length + " files)";
 		else
-			temp = prefix + this.getName() + suffix + " ("
+			return prefix + this.getName() + suffix + " ("
 					+ this.getFileMembers().length + " files)";
-		return temp;
 	}
 }
 
@@ -92,7 +104,8 @@ class CategoryTree extends Category {
 	static final int THRESHOLD_CATEGORY_SIZE = 800;
 
 	/**
-	 * Construct a category with extended capabilities like TODO ...
+	 * Construct a category with extended capabilities of recursively grouping
+	 * subcategories
 	 * 
 	 * @param name
 	 *            the name of the category which may or may not contain the
@@ -100,7 +113,7 @@ class CategoryTree extends Category {
 	 * @param children
 	 *            the children of the category or null
 	 * @param fileMembers
-	 *            the members which are files
+	 *            the members of this category which are files
 	 */
 	CategoryTree(String name, CategoryTree[] children, String[] fileMembers) {
 		super(name, children == null ? new CategoryTree[] {} : children,
@@ -111,7 +124,7 @@ class CategoryTree extends Category {
 
 	/**
 	 * Return the number of members in the file namespace of this category and
-	 * all subcategories
+	 * all subcategories which go into the same report
 	 * 
 	 * @return the number of file members
 	 */
@@ -143,16 +156,32 @@ class CategoryTree extends Category {
 		return (CategoryTree[]) super.getChildren();
 	}
 
+	/**
+	 * Return if a report will be created
+	 * 
+	 * @return if a report will be created
+	 */
 	boolean createsReport() {
 		return getRecursiveCountFileMembers() >= THRESHOLD_CATEGORY_SIZE;
 	}
 
+	/**
+	 * Create the groups of all categories which will create a report; Those
+	 * categories may have category children which should go into the same
+	 * report; This method also adds this category in all cases; Duplicates are
+	 * removed
+	 * 
+	 * @return
+	 */
 	LinkedList<Category> getReportCategories() {
 		if (reportCategories == null) {
-			Object[] result = determineReportCategories();
-			reportCategories = (LinkedList<Category>) result[0];
-			assert result[1] == null;
-			reportCategories.add(this);
+			LinkedList<Category>[] result = determineReportCategories();
+			reportCategories = result[0];
+			if (!this.createsReport()) {
+				// create report anyway for this category
+				reportCategories.add(new Category(this.getName(), result[1]
+						.toArray(new Category[] {}), this.getFileMembers()));
+			}
 			// remove duplicates
 			HashSet<String> uniqueSet = new HashSet<String>();
 			LinkedList<Category> noDupes = new LinkedList<Category>();
@@ -160,6 +189,9 @@ class CategoryTree extends Category {
 				if (!uniqueSet.contains(cat.getName())) {
 					noDupes.add(cat);
 					uniqueSet.add(cat.getName());
+				} else {
+					System.out.println("Warning: Duplicate " + cat.getName());
+					// TODO logger
 				}
 			}
 			reportCategories = noDupes;
@@ -167,37 +199,48 @@ class CategoryTree extends Category {
 		return reportCategories;
 	}
 
-	private Object[] determineReportCategories() {
-		LinkedList<Category> reportNodes = new LinkedList<Category>();
-		Category noReportNodes = null;
+	/**
+	 * Recursively determine which categories should be grouped into reports and
+	 * create a LinkedList with all categories which will produce a report;
+	 * Create another LinkedList of the remaining
+	 * 
+	 * @return the LinkedList array with the first entry being the LinkedList
+	 *         which produces the reports and the second entry being the
+	 *         remaining
+	 */
+	private LinkedList<Category>[] determineReportCategories() {
 		if (getChildren() == null || getChildren().length == 0) {
+			LinkedList<Category> leafNode = new LinkedList<Category>();
+			leafNode.add(this);
+
 			if (this.createsReport())
-				reportNodes.add(this);
+				return (LinkedList<Category>[]) new LinkedList<?>[] { leafNode,
+						new LinkedList<Category>() };
 			else
-				noReportNodes = this;
-			return new Object[] { reportNodes, noReportNodes };
+				return (LinkedList<Category>[]) new LinkedList<?>[] {
+						new LinkedList<Category>(), leafNode };
 		}
 
-		Object[] kidResult;
+		LinkedList<Category> kidNodesReport = new LinkedList<Category>();
 		LinkedList<Category> kidNodesNoReport = new LinkedList<Category>();
 		for (CategoryTree kid : getChildren()) {
-			kidResult = kid.determineReportCategories();
-			reportNodes.addAll((LinkedList<Category>) kidResult[0]);
-			if (kidResult[1] != null) {
-				assert reportNodes.size() == 0;
-				kidNodesNoReport.add((Category) kidResult[1]);
-			}
+			LinkedList<Category>[] kidResult = kid.determineReportCategories();
+			// Just copy all previously determined reports
+			kidNodesReport.addAll((LinkedList<Category>) kidResult[0]);
+			// Just save all other for later
+			kidNodesNoReport.addAll(kidResult[1]);
 		}
 		if (this.createsReport()) {
-			// create new pruned category tree with depth of only 1
+			// create new category with all kids in one array
 			Category pruned = new Category(this.getName(),
 					kidNodesNoReport.toArray(new Category[] {}),
 					this.getFileMembers());
-			reportNodes.add(pruned);
-		} else {
-			noReportNodes = this;
+			kidNodesReport.add(pruned);
+			// start from scratch with grouping
+			kidNodesNoReport = new LinkedList<Category>();
 		}
-		return new Object[] { reportNodes, noReportNodes };
+		return (LinkedList<Category>[]) new LinkedList<?>[] { kidNodesReport,
+				kidNodesNoReport };
 	}
 }
 
@@ -210,7 +253,7 @@ class TopBotThread extends Thread {
 
 	/**
 	 * Create a thread which can crawl a category and count each member's global
-	 * usage
+	 * usage; Also print which categories will be crawled
 	 * 
 	 * @param wiki
 	 *            the wiki to connect to
@@ -227,16 +270,26 @@ class TopBotThread extends Thread {
 		System.out.println(getInfo(true));
 	}
 
+	/**
+	 * Create a long String of all categories to be crawled
+	 * 
+	 * @param compressed
+	 *            set the format of the string
+	 * @return the string
+	 */
 	private String getInfo(boolean compressed) {
 		String info = "";
 		String prefix = compressed ? "" : "[[:";
 		String suffix = compressed ? "" : "]]";
+		int total = 0;
 		info += category.toString(compressed, "'''" + prefix, suffix + "'''")
 				+ "\n";
+		total += category.getFileMembers().length;
 		for (Category kid : category.getChildren()) {
 			info += "* " + kid.toString(compressed, prefix, suffix) + "\n";
+			total += kid.getFileMembers().length;
 		}
-		return info;
+		return info + "Total number of scanned files: " + total + "\n";
 	}
 
 	/**
@@ -275,15 +328,16 @@ class TopBotThread extends Thread {
 	 * @throws LoginException
 	 */
 	private void crawlCategory() throws IOException, LoginException {
-		String[] members = getAllCategoryMembers(wiki, categoryName);
-		Comparable[][] cArray = new Comparable[members.length][2];
+		LinkedList<String> members = getAllCategoryMembers(category);
+		Comparable[][] cArray = new Comparable[members.size()][2];
 
-		for (int i = 0; i < members.length; ++i) {
+		for (int i = 0; i < members.size(); ++i) {
 			if (i % 25 == 0)
 				System.out.println(this.getName() + "   PROGRESS: " + i
-						+ " of " + members.length + " done.");
-			cArray[i][1] = getActualUsageCount(wiki.getGlobalUsage(members[i]));
-			cArray[i][0] = members[i];
+						+ " of " + members.size() + " done.");
+			cArray[i][1] = getActualUsageCount(wiki.getGlobalUsage(members
+					.get(i)));
+			cArray[i][0] = members.get(i);
 		}
 
 		java.util.Arrays.sort(cArray, new java.util.Comparator<Comparable[]>() {
@@ -292,20 +346,31 @@ class TopBotThread extends Thread {
 			}
 		});
 
-		String text = "\nLast update: "
+		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddhhmmss");
+		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"),
+				Locale.US);
+		Date twoWeeksFromNow = now.getTime();
+		twoWeeksFromNow.setDate(now.getTime().getDate() + 14);
+		String text = "{{#ifexpr:{{CURRENTTIMESTAMP}}>"
+				+ timestamp.format(twoWeeksFromNow)
+				+ "|{{speedy|Outdated report, which was replaced by "
+				+ "a fresh one through [[user:{{REVISIONUSER}}]].}}|}}"
+				+ "\nLast update: "
 				+ DateFormat.getDateInstance(DateFormat.FULL).format(
-						Calendar.getInstance().getTime()) + "." + "\n"
+						now.getTime()) + "." + "\n"
 				+ "\nThis report includes the follwing categories while "
-				+ "counting only the usage in the main namespace.\n\n"
-				+ getInfo(false) + "<gallery showfilename=yes >\n";
-		for (int i = 0; i < Math.min(TopBot.TARGET_COUNT, members.length); i++) {
+				+ "counting only the usage of each file "
+				+ "in the main namespace.\n\n" + getInfo(false)
+				+ "<gallery showfilename=yes >\n";
+		for (int i = 0; i < Math.min(TopBot.TARGET_COUNT, members.size()); i++) {
 			text = text + cArray[i][0] + "|" + (i + 1) + ". Used "
 					+ cArray[i][1] + " times.\n";
 		}
-		text = text + "</gallery>"
-				+ "\n[[Category:Images that should use vector graphics]]"
-				+ "\n[[Category:" + WikiPage.firstCharToUpperCase(categoryName)
-				+ "]]";
+		text = text
+				+ "</gallery>"
+				+ (members.size() < TopBot.TARGET_COUNT ? "" : "\n[[Category:"
+						+ TopBot.ROOT_CATEGORY + "]]") + "\n[[Category:"
+				+ WikiPage.firstCharToUpperCase(categoryName) + "]]";
 		String title = "Top " + TopBot.TARGET_COUNT + " "
 				+ WikiPage.firstCharToLowerCase(categoryName);
 		String[] splittedText = { "" };
@@ -318,33 +383,24 @@ class TopBotThread extends Thread {
 	}
 
 	/**
-	 * Scan in several subcategories for the members of valid
-	 * "TopBot.ROOT_CATEGORY"-categories
+	 * Just return all file members of this tree
 	 * 
-	 * @param wiki
-	 *            the wiki to connect to
-	 * @param category
-	 *            the category (and it's subcategories) to scan
+	 * @param root
+	 *            the root of the category tree to scan
 	 * @return string array holding all members of the given category and
 	 *         members of valid subcategories
 	 * @throws IOException
 	 *             if a network error occurs
 	 */
-	private String[] getAllCategoryMembers(Wiki wiki, String category)
+	private LinkedList<String> getAllCategoryMembers(Category root)
 			throws IOException {
-		int depth = 5;
-		String[] possibleCats = wiki.getCategoryMembers(category, depth,
-				new int[] { Wiki.CATEGORY_NAMESPACE });
-		ArrayList<String> allCategoryMembers = new ArrayList<String>();
-		for (String cat : possibleCats) {
-			if (cat.endsWith(TopBot.ROOT_CATEGORY)) {
-				allCategoryMembers.addAll(Arrays.asList(wiki
-						.getCategoryMembers(cat, false, Wiki.FILE_NAMESPACE)));
-			}
-		}
-		allCategoryMembers.addAll(Arrays.asList(wiki.getCategoryMembers(
-				category, false, Wiki.FILE_NAMESPACE)));
-		return allCategoryMembers.toArray(new String[0]);
+		LinkedList<String> allCategoryMembers = new LinkedList<String>();
+
+		for (Category cat : root.getChildren())
+			allCategoryMembers.addAll(Arrays.asList(cat.getFileMembers()));
+		allCategoryMembers.addAll(Arrays.asList(root.getFileMembers()));
+
+		return allCategoryMembers;
 	}
 
 	/**
@@ -371,17 +427,12 @@ public class TopBot {
 	public static final String ROOT_CATEGORY = "images that should use vector graphics";
 
 	/**
-	 * Delete a page with this many entries (or less)
-	 */
-	public static final int DELETE_COUNT = 0;
-
-	/**
 	 * Cap number of entries to this many
 	 */
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.05.24";
+	public static final String VERSION = "v15.05.25";
 
 	public static void main(String[] args) {
 
@@ -398,8 +449,8 @@ public class TopBot {
 			commons.setLogLevel(Level.WARNING);
 
 			System.out.println("Fetching categories ...");
-			CategoryTree tree = generateCategoryTree(ROOT_CATEGORY, commons);
-			LinkedList<Category> reportCats = tree.getReportCategories();
+			CategoryTree root = generateCategoryTree(ROOT_CATEGORY, commons);
+			LinkedList<Category> reportCats = root.getReportCategories();
 
 			System.out.println("Creating threads ...");
 
@@ -444,7 +495,8 @@ public class TopBot {
 	}
 
 	/**
-	 * Determine the category tree which should be crawled
+	 * Determine the category tree which should be crawled; Only consider
+	 * categories that end with ROOT_CATEGORY
 	 * 
 	 * @param root
 	 *            the name of the category which represents the root of the tree

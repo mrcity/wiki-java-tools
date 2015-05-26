@@ -22,10 +22,13 @@ package wiki;
 
 import java.io.*;
 import java.net.*;
+import java.text.DateFormat;
 import java.text.Normalizer;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
+
 import javax.security.auth.login.*;
 
 /**
@@ -4783,6 +4786,53 @@ public class Wiki implements Serializable
         log(Level.INFO, "getCategoryMembers", "Successfully retrieved contents of Category:" + name + " (" + size + " items)");
         return members.toArray(new String[size]);
     }
+    
+    /**
+	 * Get the recent uploads for the last days for files (ns=6).
+	 * For commons we have 10000+ files per day. (May include deleted files)
+	 * @param daysBegin should be equal to or smaller than 30
+	 * @param daysEnd should be smaller than daysBegin and equal to or greater than 0
+	 * @return
+	 * @throws IOException 
+	 */
+	public String[] listRecentUploads(long daysBegin , long daysEnd) throws IOException
+	{
+		int amount = 200;
+		//&rccontinue=2013-11-27T19%3A47%3A10Z%7C111748991
+		daysBegin = Math.min(Math.max(daysBegin, 1),30);
+		daysEnd = Math.min(Math.max(0, daysEnd), daysBegin);
+		DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+		String rcStart = (dateFormat.format(new Date(System.currentTimeMillis() - daysBegin*24*60*60*1000)));
+		String rcEnd = (dateFormat.format(new Date(System.currentTimeMillis() - daysEnd*24*60*60*1000)));
+		String continueKey = "";
+		ArrayList<String> members = new ArrayList<String>();
+		do{
+			StringBuilder url = new StringBuilder(query);
+			url.append("list=recentchanges");
+			if(continueKey!=null&&continueKey.length()>0)
+				url.append("&rccontinue="+URLEncoder.encode(continueKey, "UTF-8"));
+			//else
+			{
+				url.append("&rcstart="+rcStart);
+				url.append("&rcend="+rcEnd);
+			}
+			//fun fact: uploaded files are not new files. Thus we do not use rctype=new but rctype=log !
+			url.append("&rcdir=newer&rcnamespace=6&rclimit="+amount+"&rctype=log");
+			String line = fetch(url.toString(), "listRecentUploads");
+
+
+			// xml form: <rc type="new" ns="6" title="File:Bozena (Bo) Intrator.JPG" ... />
+			for (int x = line.indexOf("<rc "); x > 0; x = line.indexOf("<rc ", ++x))
+				members.add( (parseAttribute(line, "title", x)));
+			if (line.contains("<query-continue>"))
+				continueKey =  (parseAttribute(line, "rccontinue", 0));
+			else
+				continueKey = "";
+		}while(!continueKey.isEmpty());
+		int size = members.size();
+		log(Level.INFO, "Successfully retrieved files (" + size + " items)", "listRecentUploads");
+		return  members.toArray(new String[size]);
+	}
 
     /**
      *  Searches the wiki for external links. Equivalent to [[Special:Linksearch]].
@@ -5334,7 +5384,7 @@ public class Wiki implements Serializable
      *  @param cutoff the minimum size in bytes these long pages can be
      *  @return pages above that size
      *  @throws IOException if a network error occurs
-     *  @since 0.15
+     *  @since 0.15s
      */
     public String[] longPages(int cutoff) throws IOException
     {

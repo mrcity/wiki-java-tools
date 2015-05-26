@@ -26,6 +26,7 @@ import java.text.Normalizer;
 import java.util.*;
 import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
+
 import javax.security.auth.login.*;
 
 /**
@@ -1256,7 +1257,20 @@ public class Wiki implements Serializable
     {
         return getPageInfo(new String[] { page } )[0];
     }
-
+    
+    /**
+     * If the page is a redirect
+     * @param page the page to examine
+     * @return true if the page is a redirect
+     * @throws IOException 
+     */
+    public boolean isRedirect(String page) throws IOException
+    {
+    	String url = query+"prop=info&inprop=displaytitle&titles="+URLEncoder.encode(page, "UTF-8");
+    	String line = fetch(url,"isRedirect");
+    	return line.contains("redirect=\"\"");
+    }
+    
     /**
      *  Gets miscellaneous page info. Returns:
      *  <ul>

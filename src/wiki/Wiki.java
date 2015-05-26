@@ -5384,7 +5384,7 @@ public class Wiki implements Serializable
      *  @param cutoff the minimum size in bytes these long pages can be
      *  @return pages above that size
      *  @throws IOException if a network error occurs
-     *  @since 0.15s
+     *  @since 0.15
      */
     public String[] longPages(int cutoff) throws IOException
     {

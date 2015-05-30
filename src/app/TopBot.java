@@ -78,7 +78,7 @@ class Category {
 	 * @param shortString
 	 *            determines if a very compressed String is returned
 	 * @param prefix
-	 *            the prefix of the reurned string
+	 *            the prefix of the returned string
 	 * @param suffix
 	 *            comes after the name
 	 * @return the string
@@ -380,7 +380,8 @@ class TopBotThread extends Thread {
 		} catch (FileNotFoundException ignore) {
 		}
 		wiki.edit(title, (splittedText.length == 1 ? "" : splittedText[0])
-				+ TopBot.SEPARATOR + "\n" + text, "Update");
+				+ TopBot.SEPARATOR + "\n" + text, "Update by Bot "
+				+ TopBot.VERSION + " (Scanned " + members.size() + " files)");
 	}
 
 	/**
@@ -433,7 +434,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.05.26";
+	public static final String VERSION = "v15.05.27";
 
 	public static void main(String[] args) {
 

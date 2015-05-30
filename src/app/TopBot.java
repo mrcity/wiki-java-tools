@@ -226,7 +226,7 @@ class CategoryTree extends Category {
 		for (CategoryTree kid : getChildren()) {
 			LinkedList<Category>[] kidResult = kid.determineReportCategories();
 			// Just copy all previously determined reports
-			kidNodesReport.addAll((LinkedList<Category>) kidResult[0]);
+			kidNodesReport.addAll(kidResult[0]);
 			// Just save all other for later
 			kidNodesNoReport.addAll(kidResult[1]);
 		}
@@ -238,6 +238,8 @@ class CategoryTree extends Category {
 			kidNodesReport.add(pruned);
 			// start from scratch with grouping
 			kidNodesNoReport = new LinkedList<Category>();
+		} else {
+			kidNodesNoReport.add(this);
 		}
 		return (LinkedList<Category>[]) new LinkedList<?>[] { kidNodesReport,
 				kidNodesNoReport };
@@ -434,7 +436,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.05.27";
+	public static final String VERSION = "v15.05.28";
 
 	public static void main(String[] args) {
 

@@ -2,6 +2,8 @@ package app;
 
 import java.io.IOException;
 
+import javax.security.auth.login.LoginException;
+
 interface WikiAPI {
 
 	/**
@@ -10,8 +12,9 @@ interface WikiAPI {
 	 * @return the result from the API
 	 * @throws IOException
 	 *             if a network issue occurs
+	 * @throws LoginException
 	 */
-	Object fetch() throws IOException;
+	Object fetch() throws IOException, LoginException;
 }
 
 public class App {
@@ -32,9 +35,10 @@ public class App {
 	 * @return the result from the API
 	 * @throws IOException
 	 *             when a network error occurs
+	 * @throws LoginException
 	 */
 	protected static Object attemptFetch(WikiAPI api, int maxFails,
-			int maxExceptionSleepTime) throws IOException {
+			int maxExceptionSleepTime) throws IOException, LoginException {
 		maxFails--;
 		try {
 			return api.fetch();

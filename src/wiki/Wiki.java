@@ -26,6 +26,7 @@ import java.text.Normalizer;
 import java.util.*;
 import java.util.logging.*;
 import java.util.zip.GZIPInputStream;
+
 import javax.security.auth.login.*;
 
 /**
@@ -4783,6 +4784,35 @@ public class Wiki implements Serializable
         log(Level.INFO, "getCategoryMembers", "Successfully retrieved contents of Category:" + name + " (" + size + " items)");
         return members.toArray(new String[size]);
     }
+    
+    /**
+     * Return the next batch of files ...
+     *  
+     * @param continueKey the file to continue from 
+     * @param amount the amount of file names to return
+     * @return an object containing all file names of the batch
+     * request and the file to continue from
+     * @throws IOException 
+     */
+	public Object[] listAllFiles(String continueKey, int amount) throws IOException
+	{
+        StringBuilder url = new StringBuilder(query);
+        url.append("list=allpages&apcontinue="+URLEncoder.encode(continueKey, "UTF-8")+"&apnamespace=6&apfilterredir=nonredirects&aplimit="+amount);
+        String line = fetch(url.toString(), "listAllFiles");
+
+        ArrayList<String> members = new ArrayList<String>();
+        // xml form: <p pageid="22097388" ns="6" title="File:~2009-07-09 סימטאות יפה העתיקה.jpg" />
+        for (int x = line.indexOf("<p "); x > 0; x = line.indexOf("<p ", ++x))
+        	members.add( (parseAttribute(line, "title", x)));
+        if (line.contains("<query-continue>"))
+        	continueKey =  (parseAttribute(line, "apcontinue", 0));
+        else
+        	continueKey = "";
+
+        int size = members.size();
+        log(Level.INFO, "Successfully retrieved next files (" + size + " items)", "listAllFiles");
+        return new Object[] {continueKey , members.toArray(new String[size])};
+	}
 
     /**
      *  Searches the wiki for external links. Equivalent to [[Special:Linksearch]].

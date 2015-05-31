@@ -18,7 +18,7 @@ public class WikiPage {
 	private boolean isFile;
 	// private boolean isRedirect; // TODO implementation?
 	private String name;
-	private Category[] parents;
+	private WikiCategory[] parents;
 	private String[] text;
 	private Wiki wiki;
 	private boolean isCleanedUp;
@@ -288,7 +288,7 @@ public class WikiPage {
 				"(?is)" + ".*?\\[\\[category:[^\\]\\[}{]+\\]\\].*"))
 			return;
 		// Category array derived from the pageText!
-		Category[] parentCategories = getParentCatsNoDupes();
+		WikiCategory[] parentCategories = getParentCatsNoDupes();
 		this.cleanupAnyway |= !editSummary.isEmpty()
 				|| duplicateCategoryCleanup;
 		// String array returned via the API, no duplicate entries, no sortkey,
@@ -308,7 +308,7 @@ public class WikiPage {
 
 		Object[] cleanedCatsAndText = returnCleanedCatsAndText(cleanupAnyway,
 				ignoreHidden, depth, parentCategories, allGrandparentCategories);
-		Category[] cleanParentCategories = (Category[]) cleanedCatsAndText[0];
+		WikiCategory[] cleanParentCategories = (WikiCategory[]) cleanedCatsAndText[0];
 		String removedCategoriesWikitext = (String) cleanedCatsAndText[1];
 		String cleanCategoryWikitext = (String) cleanedCatsAndText[2];
 
@@ -318,9 +318,9 @@ public class WikiPage {
 			String textOldSingleLine = getPlainText().replaceAll("\\n", "")
 					.toLowerCase();
 			// Removes the categories from the text
-			for (Category z : parentCategories)
+			for (WikiCategory z : parentCategories)
 				replaceAllInPagetext(
-						"(?iu)" + "\\[\\[Category:" + "\\Q" + z.getName()
+						"(?iu)" + "\\[\\[" + "\\Q" + z.getName()
 								+ "\\E" + "(\\|[^}#\\]\\[{><]*)?" + "\\]\\]",
 						"");
 			String textNew = (getPlainText() + cleanCategoryWikitext)
@@ -449,44 +449,45 @@ public class WikiPage {
 	 * @throws IOException
 	 */
 	private Object[] returnCleanedCatsAndText(boolean cleanupAnyway,
-			boolean ignoreHidden, int depth, Category[] parentCategories,
+			boolean ignoreHidden, int depth, WikiCategory[] parentCategories,
 			String[] grandparentStrings) throws IOException {
-		Category[] cleanCategories = new Category[parentCategories.length];
+		WikiCategory[] cleanCategories = new WikiCategory[parentCategories.length];
 		String categoryWikitext = "";
 		String removedCatsWikitext = "";
 
 		int revokedCounter = 0;
-		String revokedFlag = "e7db5f37c0a2bc9b525d8ab86ea9ed12";
+		WikiCategory revokedCategory = new WikiCategory(null, null, null);
 		// calculate the number of redundant categories
 		for (int i = 0; i < parentCategories.length; i++) {
-			cleanCategories[i] = new Category(parentCategories[i].getName(),
-					parentCategories[i].getSortkey()); // clone
+			cleanCategories[i] = new WikiCategory(
+					parentCategories[i].getName(),
+					parentCategories[i].getSortkey(), null); // clone
 			for (int r = 0; r < grandparentStrings.length; r++) {
-				if ((parentCategories[i].getName().equals(grandparentStrings[r]
-						.split(":", 2)[1]))) {
+				if ((parentCategories[i].getName()
+						.equals(grandparentStrings[r]))) {
 					removedCatsWikitext = removedCatsWikitext
-							+ "[[:Category:"
+							+ "[[:"
 							+ parentCategories[i].getName()
 							+ "]]"
-							+ childrenOfRemovedCat("Category:"
-									+ parentCategories[i].getName(), depth,
+							+ childrenOfRemovedCat(
+									parentCategories[i].getName(), depth,
 									ignoreHidden) + ", ";
 					revokedCounter++;
-					cleanCategories[i].setName(revokedFlag);
+					cleanCategories[i] = revokedCategory;
 					break;
 				}
 			}
 		}
 		// create a new array for the clean categories if needed
 		if (cleanupAnyway || revokedCounter > 0) {
-			Category[] cleanCategoriesReturn = new Category[cleanCategories.length
+			WikiCategory[] cleanCategoriesReturn = new WikiCategory[cleanCategories.length
 					- revokedCounter];
 			int temp = 0;
-			for (Category i : cleanCategories) {
-				if (!i.getName().equals(revokedFlag)) {
+			for (WikiCategory i : cleanCategories) {
+				if (!i.equals(revokedCategory)) {
 					cleanCategoriesReturn[temp++] = i;
 					categoryWikitext = categoryWikitext
-							+ "\n[[Category:"
+							+ "\n[["
 							+ i.getName()
 							+ ((i.getSortkey() == null) ? "]]" : "|"
 									+ i.getSortkey() + "]]");
@@ -655,24 +656,25 @@ public class WikiPage {
 	 * @return The Category array with no duplicate entries
 	 * @throws IOException
 	 */
-	private Category[] getParentCatsNoDupes() throws IOException {
+	private WikiCategory[] getParentCatsNoDupes() throws IOException {
 		if (isCleanedUp == false)
 			this.cleanupWikitext();
 		if (parents == null) {
 			String[] parentCats = getParentCatsFromPagetext(true);
 			// wipe dupes
 			Set<String> names = new HashSet<String>();
-			List<Category> catList = new ArrayList<Category>();
+			List<WikiCategory> catList = new ArrayList<WikiCategory>();
 			for (String name : parentCats) {
 				String splitString[] = name.split("\\|", 2);
 				if (names.add(splitString[0])
 						&& (!splitString[0].matches("^[ ]*$"))) {
-					catList.add(new Category(splitString[0],
-							(splitString.length == 2) ? splitString[1] : null));
+					catList.add(new WikiCategory(splitString[0],
+							(splitString.length == 2) ? splitString[1] : null,
+							null));
 				} else
 					this.duplicateCategoryCleanup = true;
 			}
-			this.parents = catList.toArray(new Category[catList.size()]);
+			this.parents = catList.toArray(new WikiCategory[catList.size()]);
 		}
 		return parents;
 	}
@@ -747,39 +749,5 @@ public class WikiPage {
 		this.editSummary = "";
 		this.isCleanedUp = false;
 		this.isCleanedUp_overcat = false;
-	}
-}
-
-class Category {
-	private String name;
-	private String sortkey;
-
-	/**
-	 * Internal representation of a category
-	 * 
-	 * @param name
-	 *            The name of the category (without the "Category:"-prefix)
-	 * @param sortkey
-	 *            Either a String holding the sortkey or null
-	 */
-	Category(String name, String sortkey) {
-		this.name = WikiPage.firstCharToUpperCase(name);
-		this.sortkey = sortkey;
-	}
-
-	String getName() {
-		return name;
-	}
-
-	String getSortkey() {
-		return sortkey;
-	}
-
-	void setSortkey(String sortkey) {
-		this.sortkey = sortkey;
-	}
-
-	void setName(String name) {
-		this.name = name;
 	}
 }

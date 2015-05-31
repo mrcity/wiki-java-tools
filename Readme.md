@@ -5,3 +5,4 @@
 ## ↳ [GIFburner](https://github.com/MarcoFalke/wiki-java-tools/tree/gifburner)
 ## ↳ [Imker](https://github.com/MarcoFalke/wiki-java-tools/tree/imker)
 ## ↳ [TopBot](https://github.com/MarcoFalke/wiki-java-tools/tree/topbot)
+## ↳ [{Template}](https://github.com/MarcoFalke/wiki-java-tools/tree/master-base)

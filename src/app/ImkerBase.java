@@ -12,18 +12,6 @@ import java.util.ResourceBundle;
 
 import wiki.Wiki;
 
-interface WikiAPI {
-
-	/**
-	 * Fetch something from the WikiAPI
-	 * 
-	 * @return the result from the API
-	 * @throws IOException
-	 *             if a network issue occurs
-	 */
-	Object fetch() throws IOException;
-}
-
 interface DownloadStatusHandler {
 
 	/**
@@ -45,8 +33,8 @@ interface DownloadStatusHandler {
 	void handle2(String status);
 }
 
-public class ImkerBase {
-	protected static final String VERSION = "v15.05.15";
+public class ImkerBase extends App {
+	protected static final String VERSION = "v15.05.16";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
@@ -56,8 +44,6 @@ public class ImkerBase {
 	protected static File outputFolder = null;
 	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
 			"i18n/Bundle", Locale.getDefault());
-	protected static final int MAX_FAILS = 3;
-	private static final int EXCEPTION_SLEEP_TIME = 30 * 1000; // ms
 
 	/**
 	 * Read the given file and extract valid file names in each line
@@ -90,36 +76,6 @@ public class ImkerBase {
 	}
 
 	/**
-	 * Attempt to fetch from the given api a maximum of maxFails and wait some
-	 * time (max EXCEPTION_SLEEP_TIME) between tries.
-	 * 
-	 * @param api
-	 *            the API to fetch from
-	 * @param maxFails
-	 *            the maximum number of exceptions to tolerate
-	 * @return the result from the API
-	 * @throws IOException
-	 *             when a network error occurs
-	 */
-	protected static Object attemptFetch(WikiAPI api, int maxFails)
-			throws IOException {
-		maxFails--;
-		try {
-			return api.fetch();
-		} catch (IOException e) {
-			if (maxFails == 0) {
-				throw e;
-			} else {
-				try {
-					Thread.sleep(EXCEPTION_SLEEP_TIME / (maxFails * maxFails));
-				} catch (InterruptedException ignore) {
-				}
-				return attemptFetch(api, maxFails);
-			}
-		}
-	}
-
-	/**
 	 * Loop over all file names and call the StatusHandler; Files already
 	 * existing locally as well as files not found in the remote are skipped!
 	 * 
@@ -128,7 +84,8 @@ public class ImkerBase {
 	 * @throws IOException
 	 *             if an io error (network or file related) occurs
 	 */
-	protected static void downloadLoop(DownloadStatusHandler sh) throws IOException {
+	protected static void downloadLoop(DownloadStatusHandler sh)
+			throws IOException {
 		for (int i = 0; i < fileNames.length; i++) {
 			final String fileName = fileNames[i].substring("File:".length());
 			sh.handle1(i, fileName);
@@ -138,13 +95,14 @@ public class ImkerBase {
 				sh.handle2(" ... " + MSGS.getString("Status_File_Exists"));
 				continue;
 			}
+			// TODO add option to rate limit
 			boolean downloaded = (boolean) attemptFetch(new WikiAPI() {
 
 				@Override
 				public Object fetch() throws IOException {
 					return wiki.getImage(fileName, outputFile);
 				}
-			}, MAX_FAILS);
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 			if (downloaded == false) {
 				sh.handle2(" ... " + MSGS.getString("Status_File_Not_Found"));
 				continue;

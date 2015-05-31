@@ -127,7 +127,7 @@ public class ImkerCLI extends ImkerBase {
 					return wiki.getCategoryMembers(arg, subcat,
 							Wiki.FILE_NAMESPACE);
 				}
-			}, MAX_FAILS);
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} else if (pageIndex > 0) {
 			arg = inputArg.substring(pageIndex + PAGE_PARAM.length());
 			return (String[]) attemptFetch(new WikiAPI() {
@@ -136,7 +136,7 @@ public class ImkerCLI extends ImkerBase {
 				public String[] fetch() throws IOException {
 					return wiki.getImagesOnPage(arg);
 				}
-			}, MAX_FAILS);
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} else if (fileIndex > 0) {
 			arg = inputArg.substring(fileIndex + FILE_PARAM.length());
 			return readFileNames(arg);

@@ -390,7 +390,7 @@ public class ImkerGUI extends ImkerBase {
 					return wiki.getCategoryMembers(inputCategory, subcat,
 							Wiki.FILE_NAMESPACE);
 				}
-			}, MAX_FAILS);
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} else if (PAGE_BUTTON.isSelected()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Page")
 					+ " ...");
@@ -400,7 +400,7 @@ public class ImkerGUI extends ImkerBase {
 				public String[] fetch() throws IOException {
 					return wiki.getImagesOnPage(inputPage);
 				}
-			}, MAX_FAILS);
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} else { // fileButton.isSelected()
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Parse_File")
 					+ " ...");

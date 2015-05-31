@@ -2,13 +2,10 @@ package app;
 
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
@@ -23,33 +20,32 @@ import wiki.Wiki;
 import wiki.WikiPage;
 import wiki.Wiki.LogEntry;
 
-public class GIFburner {
+public class GIFburner extends App {
 
 	static Wiki commons;
-	static String tempFolder = "/tmp";
 	static int replaceCounter = 0;
 	static int replaceCounterMax = 10;
 	static String replaceCOMDEL = "";
-	static String commonsDelinkerPage = "User:CommonsDelinker/commands";
-	static int waitAfterComDelRequest = 15; // in minutes
+	final static String COMMONS_DELINKER_PAGE = "User:CommonsDelinker/commands";
+	final static int WAIT_AFTER_COMDEL_REQUEST = 15; // in minutes
+	final static String VERSION = "v15.06.01";
 
 	static String linkList = "";
 	static Queue<String> deleteQueue = new LinkedList<>();
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
+
+		char[] password = passwordDialog(args);
 
 		System.out
-				.println("version 15.01.02\n"
-						+ "Keep in mind to move the list without the 'File:' prefix to "
-						+ tempFolder
-						+ "/FileList.\n"
-						+ "After the bot finished: Clean up all still tagged files first!\n");
+				.println("Is https://commons.wikimedia.org/w/index.php?title=Category:DuplicatePNG empyt?");
+		System.in.read();
 
 		commons = new Wiki("commons.wikimedia.org");
 
 		try {
-
-			commons.login("GifTagger", "31cfa1691e67505729dc1d985d4b14f3");
+			commons.login(args[0], password);
+			password = null;
 			commons.setThrottle(8 * 1000);
 			commons.setMaxLag(3);
 			commons.setMarkBot(true);
@@ -57,7 +53,7 @@ public class GIFburner {
 			commons.setLogLevel(Level.WARNING);
 
 			BufferedReader br = new BufferedReader(new InputStreamReader(
-					new DataInputStream(new FileInputStream(tempFolder
+					new DataInputStream(new FileInputStream(args[1]
 							+ "/FileList"))));
 
 			gifTagger(br);
@@ -71,29 +67,80 @@ public class GIFburner {
 
 	}
 
-	private static void gifTagger(BufferedReader br) throws LoginException,
-			IOException, InterruptedException {
+	/**
+	 * Verify the command line arguments and print program information while
+	 * asking for the user's password
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @return the password
+	 */
+	private static char[] passwordDialog(String[] args) {
 
-		File PNGtemp = new File(tempFolder
-				+ "/temp-058db7b7f89f89bd75f4b4c63848d741");
+		System.out.println(VERSION);
+
+		String[] expectedArgs = { "username", "fileList" };
+		String[] expectedArgsDescription = {
+				"username is your username on the wiki.",
+				"fileList is the file list with all file names (one per line, without \"File:\"-prefix)." };
+		if (args.length != expectedArgs.length) {
+			System.out.print("Usage: java -jar filename.jar");
+			for (String i : expectedArgs)
+				System.out.print(" [" + i + "]");
+			System.out.println("");
+			for (String i : expectedArgsDescription)
+				System.out.println("Where " + i);
+			System.exit(-1);
+		}
+		System.out.println("Please type in the password for " + args[0] + ".");
+		return System.console().readPassword();
+	}
+
+	/**
+	 * Run the main program
+	 * 
+	 * @param br
+	 *            the buffered reader to read the file list from
+	 * @throws LoginException
+	 * @throws IOException
+	 *             if a network error occurs
+	 */
+	private static void gifTagger(BufferedReader br) throws LoginException,
+			IOException {
+
+		final File PNGtemp = File.createTempFile("gif2png", ".png", null);
+		final File GIFtemp = File.createTempFile("gif", ".gif", null);
+		PNGtemp.deleteOnExit();
+		GIFtemp.deleteOnExit();
 
 		String strLine;
-		WikiPage source;
 		while ((strLine = br.readLine()) != null) {
 			if (strLine.length() == 0)
 				continue;
+			final WikiPage source;
 			try {
 				source = new WikiPage(commons, "File:" + strLine);
 			} catch (FileNotFoundException e) {
 				System.out.println("Skip: File:" + strLine + " (Not found)");
 				continue;
 			}
-			if (saveIsRedirect(source.getName(), 0)) {
+			if ((boolean) attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException {
+					return commons.isRedirect(source.getName());
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME)) {
 				System.out.println("Skip: " + source.getName() + " (Redirect)");
 				continue;
 			}
-			String metadata = saveGetFileMetadata(source.getName(), 0)
-					.toString();
+			String metadata = (String) attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException {
+					return commons.getFileMetadata(source.getName()).toString();
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 			if (!metadata.contains("mime=image/gif")) {
 				System.out.println("Skip: " + source.getName()
 						+ " (Not image/gif)");
@@ -102,17 +149,33 @@ public class GIFburner {
 			}
 			if (metadata.contains("frameCount=1, ")) {
 
-				LogEntry[] log = saveGetImageHistory(source.getName(), 0);
+				LogEntry[] log = (LogEntry[]) attemptFetch(new WikiAPI() {
+
+					@Override
+					public Object fetch() throws IOException {
+						return commons.getImageHistory(source.getName());
+					}
+				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 				if (log.length > 1) {
 					System.out.println("Skip: " + source.getName()
 							+ " (More than one revision)");
 					// TODO not continue!
 					continue;
 				}
-				byte[] GIFbytes = saveGetImage(source.getName(), 0);
+				boolean downloaded = (boolean) attemptFetch(new WikiAPI() {
+
+					@Override
+					public Object fetch() throws IOException {
+						return commons.getImage(source.getName(), GIFtemp);
+					}
+				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+				if (!downloaded) {
+					throw new RuntimeException(source.getName()
+							+ "does not exist anymore!");
+				}
 				BufferedImage GIFimage;
 				try {
-					GIFimage = ImageIO.read(new ByteArrayInputStream(GIFbytes));
+					GIFimage = ImageIO.read(GIFtemp);
 				} catch (ArrayIndexOutOfBoundsException e) {
 					System.out.println("Skip: File:" + strLine
 							+ " (ArrayIndexOutOfBoundsException)");
@@ -125,7 +188,7 @@ public class GIFburner {
 							+ " (Opaque & Greyscale)");
 					continue;
 				}
-				String issue = "This GIF was problematic due to "
+				final String issue = "This GIF was problematic due to "
 						+ (isOpaque ? "" : "transparency")
 						+ (!isGreyScale && !isOpaque ? " and " : "")
 						+ (isGreyScale ? "" : "non-greyscale color table")
@@ -135,11 +198,9 @@ public class GIFburner {
 						+ " (frameCount=1)");
 				ImageIO.write(GIFimage, "png", PNGtemp);
 
-				String filename = source.getName().replaceAll("\\.[a-zA-Z]+$",
-						"");
-				filename = appendSuffix(commons, filename);
-				String historyLog = createHistoryLog(commons, GIFimage,
-						GIFbytes, log);
+				final String filename = appendSuffix(commons, source.getName()
+						.replaceAll("\\.[a-zA-Z]+$", ""));
+				String historyLog = createHistoryLog(GIFimage, GIFtemp, log);
 
 				source.replaceAllInPagetext(
 						"\\{\\{ *[Ss]?(hould)?( )?[Bb]?(e)?( )?[Cc]?(onvert)?( )?[Tt]?o? ?[Pp][Nn][Gg] *\\}\\}",
@@ -152,37 +213,51 @@ public class GIFburner {
 						"\\{\\{ *([pP]NG (version )?available|[sS]uperseded ?PNG) *\\|",
 						"{{superseded|");
 
-				String pageText = source.getPlainText()
+				final String pageText = source.getPlainText()
 						+ "\n== {{Original upload log}} ==\n"
 						+ "{| class=\"wikitable\"\n|-\n"
 						+ "! {{int:filehist-datetime}} !! {{int:filehist-dimensions}} !! {{int:filehist-user}} !! {{int:filehist-comment}}\n"
 						+ historyLog + "|}";
 
-				saveUpload(
-						PNGtemp,
-						filename,
-						pageText,
-						"Bot: Converting file to [[c:COM:FT#GIFvsPNG|superior]] PNG file. (Source: [[c:"
-								+ source.getName()
-								+ "|"
-								+ source.getName().substring(5)
-								+ "]]). "
-								+ issue, 0);
+				attemptFetch(new WikiAPI() {
+
+					@Override
+					public Object fetch() throws IOException, LoginException {
+						commons.upload(
+								PNGtemp,
+								filename,
+								pageText,
+								"Bot: Converting file to [[c:COM:FT#GIFvsPNG|superior]] PNG file. (Source: [[c:"
+										+ source.getName()
+										+ "|"
+										+ source.getName().substring(5)
+										+ "]]). " + issue);
+						return null;
+					}
+				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 
 				linkList += "*[[:" + source.getName()
 						+ "#6cca01a2b5ea26e7871b]]\n";
 
-				saveEdit(
-						source.getName(),
-						"{{DuplicatePNG|" + filename + "}}\n"
-								+ source.getPlainText(),
-						"File was replaced by [[c:COM:FT#GIFvsPNG|superior]] PNG version - tagging with "
-								+ "{{[[c:template:Duplicate|Duplicate]]|[[c:"
-								// (no DuplicatePNG)
-								+ filename
-								+ "|"
-								+ filename.substring(5)
-								+ "]]}}. " + issue, 0);
+				attemptFetch(new WikiAPI() {
+
+					@Override
+					public Object fetch() throws IOException, LoginException {
+						commons.edit(
+								source.getName(),
+								"{{DuplicatePNG|" + filename + "}}\n"
+										+ source.getPlainText(),
+								"File was replaced by [[c:COM:FT#GIFvsPNG|superior]] PNG version - tagging with "
+										+ "{{[[c:template:Duplicate|Duplicate]]|[[c:"
+										// (no DuplicatePNG)
+										+ filename
+										+ "|"
+										+ filename.substring(5)
+										+ "]]}}. "
+										+ issue);
+						return null;
+					}
+				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 
 				deleteQueue.add(source.getName() + "|" + filename);
 				replaceViaDelinkerAndProcessDupes("{{universal replace|"
@@ -207,161 +282,59 @@ public class GIFburner {
 				+ "====================================");
 	}
 
-	//
-	// Exception "resistant" wrappers
-	//
-	final private static int maxExceptions = 3;
-	final private static int sleepAfterExc = 7 * 60;
-
-	private static void sleepAndPrint(int secs) {
-		System.out.println("\n  ************\n" + " Exception caught\n"
-				+ " Sleep " + secs + " seconds.\n  ************\n");
-		try {
-			Thread.sleep(secs * 1000);
-		} catch (InterruptedException e) {
-		}
-	}
-
-	private static byte[] saveGetImage(String title, int exceptions)
-			throws IOException {
-		try {
-			return commons.getImage(title);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				return saveGetImage(title, exceptions);
-		}
-	}
-
-	private static LogEntry[] saveGetImageHistory(String title, int exceptions)
-			throws IOException {
-		try {
-			return commons.getImageHistory(title);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				return saveGetImageHistory(title, exceptions);
-		}
-	}
-
-	private static Object saveGetFileMetadata(String file, int exceptions)
-			throws IOException {
-		try {
-			return commons.getFileMetadata(file);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				return saveGetFileMetadata(file, exceptions);
-		}
-	}
-
-	private static boolean saveIsRedirect(String page, int exceptions)
-			throws IOException {
-		try {
-			return commons.isRedirect(page);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				return saveIsRedirect(page, exceptions);
-		}
-	}
-
-	private static void saveEdit(String name, String text, String summary,
-			int exceptions) throws LoginException, IOException {
-		try {
-			commons.edit(name, text, summary);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				saveEdit(name, text, summary, exceptions);
-		}
-	}
-
-	private static void saveUpload(File pNGtemp, String filename,
-			String pageText, String reason, int exceptions)
-			throws LoginException, IOException {
-		try {
-			commons.upload(pNGtemp, filename, pageText, reason);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				saveUpload(pNGtemp, filename, pageText, reason, exceptions);
-		}
-	}
-
-	private static void saveDelete(String title, String reason, int exceptions)
-			throws LoginException, IOException {
-		try {
-			commons.delete(title, reason);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				saveDelete(title, reason, exceptions);
-		}
-	}
-
-	private static String saveGetPageText(String title, int exceptions)
-			throws IOException {
-		try {
-			return commons.getPageText(title);
-		} catch (IOException e) {
-			sleepAndPrint(sleepAfterExc);
-			exceptions++;
-			if (exceptions == maxExceptions)
-				throw e;
-			else
-				return saveGetPageText(title, exceptions);
-		}
-	}
-
-	private static void processDuplicates() throws LoginException, IOException,
-			InterruptedException {
+	/**
+	 * Create all redirects (delete first)
+	 * 
+	 * @throws LoginException
+	 * @throws IOException
+	 *             if a network error occurs
+	 */
+	private static void processDuplicates() throws LoginException, IOException {
 		String poll;
 		String[] temp;
-		String source;
-		String target;
-		int sleepSeconds = waitAfterComDelRequest * 60;
+		int sleepSeconds = WAIT_AFTER_COMDEL_REQUEST * 60;
 
 		System.out.println("Sleeping " + sleepSeconds
 				+ " seconds before processing duplicates.");
-		Thread.sleep(1000 * sleepSeconds);
+		try {
+			Thread.sleep(1000 * sleepSeconds);
+		} catch (InterruptedException ignore) {
+		}
 		while (true) {
 			poll = deleteQueue.poll();
 			if (poll == null)
 				return;
 			temp = poll.split("\\|");
-			source = temp[0];
-			target = temp[1];
+			final String source = temp[0];
+			final String target = temp[1];
 			System.out.println("#REDIRECT [[" + source + "]] -> [[" + target
 					+ "]]");
-			saveDelete(source, "Exact duplicate of [[c:" + target + "]].", 0);
-			saveEdit(source, "#REDIRECT [[" + target + "]]",
-					"Redirecting to [[c:" + target + "|duplicate file]].", 0);
+			attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException, LoginException {
+					commons.delete(source, "Exact duplicate of [[c:" + target
+							+ "]].");
+					return null;
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException, LoginException {
+					commons.edit(source, "#REDIRECT [[" + target + "]]",
+							"Redirecting to [[c:" + target
+									+ "|duplicate file]].");
+					return null;
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 
 		}
 	}
 
+	/**
+	 * Conclude by writing which replacements should be done
+	 */
 	private static void writeConclusion() {
 		System.out.println("Request replacements of:" + "\n" + replaceCOMDEL
 				+ "\n");
@@ -369,17 +342,34 @@ public class GIFburner {
 				+ "\n\n(At least the last " + replaceCounter + " files)");
 	}
 
+	/**
+	 * Accept replacements for commons delinker and queue them until more than
+	 * replaceCounterMax replacements accumulated; Then edit the comDel page and
+	 * processDuplicates()
+	 * 
+	 * @param rep
+	 *            the replacement to queue
+	 * @throws LoginException
+	 * @throws IOException
+	 *             if a network error occurs
+	 */
 	private static void replaceViaDelinkerAndProcessDupes(String rep)
-			throws LoginException, IOException, InterruptedException {
+			throws LoginException, IOException {
 		if (rep.length() > 0) {
 			replaceCOMDEL += rep;
 			replaceCounter++;
 		}
 		if (replaceCounter > 0 && replaceCounter >= replaceCounterMax) {
-			saveEdit(commonsDelinkerPage,
-					saveGetPageText(commonsDelinkerPage, 0) + replaceCOMDEL,
-					"Requesting to replace " + replaceCounter
-							+ " GIFs by exact PNG duplicates.", 0);
+			attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException, LoginException {
+					commons.edit(COMMONS_DELINKER_PAGE, replaceCOMDEL,
+							"Requesting to replace " + replaceCounter
+									+ " GIFs by exact PNG duplicates.", -1);
+					return null;
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 			replaceCounter = 0;
 			replaceCOMDEL = "";
 			// Also delete
@@ -388,6 +378,13 @@ public class GIFburner {
 
 	}
 
+	/**
+	 * Determine if the given image is opaque
+	 * 
+	 * @param gIFimage
+	 *            the image
+	 * @return if it is opaque
+	 */
 	private static boolean isOpaque(BufferedImage gIFimage) {
 		for (int w = 0; w < gIFimage.getWidth(); w++) {
 			for (int h = 0; h < gIFimage.getHeight(); h++) {
@@ -401,6 +398,13 @@ public class GIFburner {
 		return true;
 	}
 
+	/**
+	 * Determine if the given image is greyscale
+	 * 
+	 * @param gIFimage
+	 *            the image
+	 * @return if it is greyscale
+	 */
 	private static boolean isGreyscale(BufferedImage gIFimage) {
 		for (int w = 0; w < gIFimage.getWidth(); w++) {
 			for (int h = 0; h < gIFimage.getHeight(); h++) {
@@ -416,8 +420,19 @@ public class GIFburner {
 		return true;
 	}
 
-	private static String createHistoryLog(Wiki commons,
-			BufferedImage GIFimage, byte[] GIFbytes, LogEntry[] log) {
+	/**
+	 * Create a String with the history log
+	 * 
+	 * @param GIFimage
+	 *            the image to read the width and height from
+	 * @param GIFfile
+	 *            the file to read the length in bytes from
+	 * @param log
+	 *            the log entries to consider
+	 * @return the history log
+	 */
+	private static String createHistoryLog(BufferedImage GIFimage,
+			File GIFfile, LogEntry[] log) {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		LogEntry relevantLog = log[0]; // TODO log.length>1
 		String username = null;
@@ -426,7 +441,7 @@ public class GIFburner {
 		String historyLog = "|-\n" + "| " + "{{ISOdate|"
 				+ sdf.format(relevantLog.getTimestamp().getTime()) + "}} || "
 				+ GIFimage.getWidth() + " × " + GIFimage.getHeight() + " ("
-				+ GIFbytes.length + " bytes) || {{User|" + username
+				+ GIFfile.length() + " bytes) || {{User|" + username
 				+ "}} || ''<nowiki>" + relevantLog.getReason()
 				+ "</nowiki>''\n"; // TODO interpret like mediawiki upload
 									// comment!

@@ -9,7 +9,6 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Locale;
 import java.util.TimeZone;
 import java.util.logging.Level;
 
@@ -333,9 +332,8 @@ class TopBotThread extends Thread {
 			}
 		});
 
-		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddhhmmss");
-		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"),
-				Locale.UK);
+		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddHHmmss");
+		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 		Date twoWeeksFromNow = now.getTime();
 		twoWeeksFromNow.setDate(now.getTime().getDate() + 14);
 		String text = "{{#ifexpr:{{CURRENTTIMESTAMP}}>"
@@ -421,7 +419,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.05.28";
+	public static final String VERSION = "v15.05.29";
 
 	public static void main(String[] args) {
 

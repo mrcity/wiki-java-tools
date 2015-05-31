@@ -14,7 +14,10 @@ import java.util.regex.Pattern;
 import javax.security.auth.login.LoginException;
 
 public class WikiPage {
-	private static final String noToken = "true";
+	private static final String NO_TOKEN = "true";
+	private static final WikiCategory REVOKED_CATEGORY = new WikiCategory(null,
+			null, null);
+
 	private boolean isFile;
 	// private boolean isRedirect; // TODO implementation?
 	private String name;
@@ -101,7 +104,7 @@ public class WikiPage {
 		for (int i = 0; i < text.length; ++i) {
 			String cleanText;
 			String textPart;
-			if (text[i++].equals(noToken))
+			if (text[i++].equals(NO_TOKEN))
 				textPart = text[i];
 			else
 				continue;
@@ -319,10 +322,8 @@ public class WikiPage {
 					.toLowerCase();
 			// Removes the categories from the text
 			for (WikiCategory z : parentCategories)
-				replaceAllInPagetext(
-						"(?iu)" + "\\[\\[" + "\\Q" + z.getName()
-								+ "\\E" + "(\\|[^}#\\]\\[{><]*)?" + "\\]\\]",
-						"");
+				replaceAllInPagetext("(?iu)" + "\\[\\[" + "\\Q" + z.getName()
+						+ "\\E" + "(\\|[^}#\\]\\[{><]*)?" + "\\]\\]", "");
 			String textNew = (getPlainText() + cleanCategoryWikitext)
 					.replaceAll("\\n{3,}", "\n\n");
 			this.setPlainText(textNew);
@@ -456,7 +457,6 @@ public class WikiPage {
 		String removedCatsWikitext = "";
 
 		int revokedCounter = 0;
-		WikiCategory revokedCategory = new WikiCategory(null, null, null);
 		// calculate the number of redundant categories
 		for (int i = 0; i < parentCategories.length; i++) {
 			cleanCategories[i] = new WikiCategory(
@@ -473,7 +473,7 @@ public class WikiPage {
 									parentCategories[i].getName(), depth,
 									ignoreHidden) + ", ";
 					revokedCounter++;
-					cleanCategories[i] = revokedCategory;
+					cleanCategories[i] = REVOKED_CATEGORY;
 					break;
 				}
 			}
@@ -484,7 +484,7 @@ public class WikiPage {
 					- revokedCounter];
 			int temp = 0;
 			for (WikiCategory i : cleanCategories) {
-				if (!i.equals(revokedCategory)) {
+				if (!(i == REVOKED_CATEGORY)) {
 					cleanCategoriesReturn[temp++] = i;
 					categoryWikitext = categoryWikitext
 							+ "\n[["
@@ -544,7 +544,7 @@ public class WikiPage {
 	 */
 	public void replaceAllInPagetext(String regex, String replacement) {
 		for (int p = 0; p < text.length; ++p) {
-			if (text[p].equals(noToken))/* || text[p].equals("<code>")) */{
+			if (text[p].equals(NO_TOKEN))/* || text[p].equals("<code>")) */{
 				++p;
 				text[p] = text[p].replaceAll(regex, replacement);
 			} else
@@ -589,7 +589,7 @@ public class WikiPage {
 			}
 		}
 		if (smallestIndexOfPrefix == text.length()) {
-			list.add(noToken);
+			list.add(NO_TOKEN);
 			list.add(text);
 			return list;
 		}
@@ -597,7 +597,7 @@ public class WikiPage {
 		String suf = preserve[prefixWithSmallestIndex][1];
 
 		String[] splitPre = text.split("(?i)" + pre, 2);
-		list.add(noToken);
+		list.add(NO_TOKEN);
 		list.add(splitPre[0]);
 		list.add(pre);// add pre instead of false!
 		String[] splitSuf = splitPre[1].split("(?i)" + suf, 2);
@@ -726,7 +726,7 @@ public class WikiPage {
 	public String getPlainTextNoComments() {
 		String returnString = "";
 		for (int u = 0; u < text.length; ++u) {
-			if (text[u].equals(noToken))// || text[u].equals("<code>"))
+			if (text[u].equals(NO_TOKEN))// || text[u].equals("<code>"))
 				returnString += text[++u];
 			else
 				++u;

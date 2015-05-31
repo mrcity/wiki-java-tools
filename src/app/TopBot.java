@@ -17,15 +17,15 @@ import javax.security.auth.login.LoginException;
 
 import wiki.Wiki;
 import wiki.WikiPage;
+import wiki.WikiCategory;
 
-class Category {
-	private String name;
+class Category extends WikiCategory {
+
 	private String[] fileMembers;
-	private Category[] children;
-	public static final String CATEGORY_PREFIX = "Category:";
 
 	/**
-	 * Construct a category
+	 * Construct a Category which may have children and may hold the files which
+	 * can be found in it
 	 * 
 	 * @param name
 	 *            the name of the category which may or may not contain the
@@ -36,30 +36,9 @@ class Category {
 	 *            the members of this category which are files
 	 */
 	Category(String name, Category[] children, String[] fileMembers) {
-		this.name = CATEGORY_PREFIX
-				+ WikiPage.firstCharToUpperCase(name.replaceFirst("(?i)^"
-						+ CATEGORY_PREFIX, ""));
+		super(name, null, children);
 		this.fileMembers = fileMembers == null ? new String[] {} : fileMembers;
-		this.children = children == null ? new Category[] {} : children;
 
-	}
-
-	/**
-	 * Return the name of the category with the namespace prefix
-	 * 
-	 * @return the name
-	 */
-	String getName() {
-		return name;
-	}
-
-	/**
-	 * Return the children of this category
-	 * 
-	 * @return the array of children
-	 */
-	Category[] getChildren() {
-		return children;
 	}
 
 	/**
@@ -67,8 +46,13 @@ class Category {
 	 * 
 	 * @return the file members
 	 */
-	String[] getFileMembers() {
+	public String[] getFileMembers() {
 		return fileMembers;
+	}
+
+	@Override
+	public Category[] getChildren() {
+		return (Category[]) super.getChildren();
 	}
 
 	/**
@@ -101,7 +85,7 @@ class CategoryTree extends Category {
 	/**
 	 * Create report when this many recursive members (or more)
 	 */
-	static final int THRESHOLD_CATEGORY_SIZE = 800;
+	public static final int THRESHOLD_CATEGORY_SIZE = 800;
 
 	/**
 	 * Construct a category with extended capabilities of recursively grouping
@@ -115,7 +99,8 @@ class CategoryTree extends Category {
 	 * @param fileMembers
 	 *            the members of this category which are files
 	 */
-	CategoryTree(String name, CategoryTree[] children, String[] fileMembers) {
+	public CategoryTree(String name, CategoryTree[] children,
+			String[] fileMembers) {
 		super(name, children == null ? new CategoryTree[] {} : children,
 				fileMembers);
 		this.recursiveCountFileMembers = 0;
@@ -128,7 +113,7 @@ class CategoryTree extends Category {
 	 * 
 	 * @return the number of file members
 	 */
-	int getRecursiveCountFileMembers() {
+	public int getRecursiveCountFileMembers() {
 		if (!recursiveFileMembersUpdated)
 			updateCount();
 
@@ -152,7 +137,7 @@ class CategoryTree extends Category {
 	}
 
 	@Override
-	CategoryTree[] getChildren() {
+	public CategoryTree[] getChildren() {
 		return (CategoryTree[]) super.getChildren();
 	}
 
@@ -161,7 +146,7 @@ class CategoryTree extends Category {
 	 * 
 	 * @return if a report will be created
 	 */
-	boolean createsReport() {
+	public boolean createsReport() {
 		return getRecursiveCountFileMembers() >= THRESHOLD_CATEGORY_SIZE;
 	}
 
@@ -173,7 +158,7 @@ class CategoryTree extends Category {
 	 * 
 	 * @return the category groups as a LinkedList holding the root nodes
 	 */
-	LinkedList<Category> getReportCategories() {
+	public LinkedList<Category> getReportCategories() {
 		if (reportCategories == null) {
 			LinkedList<Category>[] result = determineReportCategories();
 			reportCategories = result[0];

@@ -19,6 +19,8 @@ public class Flock {
 	static int ioCounter = 0;
 	static int skipped = 0;
 	static int checkNeededCount = 0;
+	static final String BOT_NAME = "Flock";
+	static final String VERSION = "v15.06.11";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
@@ -58,8 +60,7 @@ public class Flock {
 	 */
 	private static char[] passwordDialog(String[] args) {
 
-		String version = "v15.03.24";
-		System.out.println(version);
+		System.out.println(VERSION);
 
 		String[] expectedArgs = { "username" };
 		String[] expectedArgsDescription = { "username is your username on the wiki." };
@@ -211,8 +212,8 @@ public class Flock {
 					+ " of the files and it is up to you to have a look at them.\n"
 					+ checkNeeded + "\n--~~~~";
 
-		wiki.edit(talkPageTitle, wiki.getPageText(talkPageTitle) + reportText,
-				"Summarizing my scan");
+		wiki.edit(talkPageTitle, reportText, "Report - " + BOT_NAME + " "
+				+ VERSION, -1);
 		System.out.println();
 	}
 

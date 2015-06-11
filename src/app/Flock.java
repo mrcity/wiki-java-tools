@@ -12,6 +12,73 @@ import javax.security.auth.login.LoginException;
 import wiki.Wiki;
 import wiki.WikiPage;
 
+enum Regex {
+
+	// stolen from https://svn.toolserver.org/svnroot/bryan/
+	FLICKR(
+			new String[] {
+					(Flock.REGEX_FLAGS + ".*?(?:http\\:\\/\\/www\\.)?flickr\\.com\\/photos\\/[0-9]*?\\@[^ \\n\\t\\|\\=\\&\\/]*?\\/\\/?([0-9][0-9]*).*"),
+					(Flock.REGEX_FLAGS + ".*?(?:http\\:\\/\\/www\\.)?flickr\\.com\\/photos\\/[^ \\n\\t\\|\\=\\&\\/]*?\\/\\/?([0-9][0-9]*).*"),
+					(Flock.REGEX_FLAGS + ".*?(?:http\\:\\/\\/www\\.)?flickr\\.com\\/photo_zoom\\.gne\\?id\\=([0-9][0-9]*).*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{flickr.*?photo_id.??\\=.??([0-9]*).*?"),
+					(Flock.REGEX_FLAGS + ".*?(?:http\\:\\/\\/)?.*?\\.static\\.flickr\\.com\\/.*?\\/([0-9]*).*?\\.jpg.*") },
+			"flickrreview"),
+	// Also check for panoramio
+	PANORAMIO(
+			new String[] {
+					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/(www)?\\.panoramio\\.com\\/photo\\/\\d+.*"),
+					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/(www)?\\.panoramio\\.com\\/user\\/\\d+\\?with_photo_id=\\d+.*") },
+			"Panoramioreview"),
+	// Also check for Picasa
+	PICASA(
+			new String[] { (Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/picasaweb\\.google\\.com\\/[a-z0-9]+\\/[^#]+\\#(slideshow\\/)?\\d+.*") },
+			"Picasareview"),
+	// Also check for Mushroom Observer
+	MUSHROOMOBSERVER(
+			new String[] {
+					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/mushroomobserver\\.org\\/image\\/show_image\\/\\d+.*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{MushroomObserver[^}{]*\\}\\}.*") },
+			"LicenseReview"),
+	// Also check for Forestryimages
+	FORESTRYIMAGES(
+			new String[] {
+					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/(www\\.)?forestryimages\\.org\\/browse\\/detail\\.cfm\\?imgnum\\=\\d+.*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{Forestryimages[^}{]*\\}\\}.*") },
+			"LicenseReview"),
+
+	VALID_SOURCE_OR_LICENSE(
+			new String[] {
+					(Flock.REGEX_FLAGS + ".*?\\{\\{(flickr|Licen(s|c)eReview|User\\:FlickreviewR\\/|User\\:Flickr upload bot).*?\\}\\}.*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{((Permission)?OTRS|PD)[^\\]\\[\\{]*\\}\\}.*?"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{(Extracted[ _]from|Derived[_ ]from|Retouched picture)[^\\]\\[\\{]*\\}\\}.*?"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{(own|OGL|Narendra[ _]Modi|LGE|PossiblyPD|Icelandic[ _]currency|Icelandic[ _]stamp|Iranian[ _]currency|CC\\-(zero|0)|Anonymous[^\\]\\[\\{]*|Bild-LogoSH)\\}\\}.*"),
+					(Flock.REGEX_FLAGS + ".*?\\[\\[:?file:.*?\\..*?\\]\\].*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{(Panoramioreview).*?\\}\\}.*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{(picasareview).*?\\}\\}.*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{User\\:Picasa Review Bot.*?\\}\\}.*"),
+					(Flock.REGEX_FLAGS + ".*?\\{\\{(delete\\|).*?\\}\\}.*") },
+			null);
+	private String[] regexes;
+	private String template;
+
+	private Regex(String[] regexes, String template) {
+		this.regexes = regexes;
+		this.template = template;
+	}
+
+	public boolean isMatch(String text) {
+		for (String regex : regexes) {
+			if (text.matches(regex))
+				return true;
+		}
+		return false;
+	}
+
+	public String getTemplate() {
+		return template;
+	}
+}
+
 public class Flock extends App {
 
 	static String checkNeeded = "";
@@ -26,6 +93,8 @@ public class Flock extends App {
 	final static int MAX_TEXT_LENGTH = 60000;
 	final static int DAYS_BEGIN = 15;
 	final static int DAYS_END = 6;
+
+	static final String REGEX_FLAGS = "(?si)";
 
 	public static void main(String[] args) {
 
@@ -87,7 +156,6 @@ public class Flock extends App {
 	 */
 	private static void crawlFlickr(final Wiki wiki) throws LoginException,
 			IOException {
-		final String flags = "(?si)";
 		System.out.println("Fetching list of files ...");
 		final String[] members = (String[]) attemptFetch(new WikiAPI() {
 
@@ -113,129 +181,31 @@ public class Flock extends App {
 				skipped++;
 				continue;
 			}
-			// stolen from https://svn.toolserver.org/svnroot/bryan/
-			boolean matchesFlickPhotoID = text
-					.matches(flags
-							+ ".*?(?:http\\:\\/\\/www\\.)?flickr\\.com\\/photos\\/[0-9]*?\\@[^ \\n\\t\\|\\=\\&\\/]*?\\/\\/?([0-9][0-9]*).*")
-					|| text.matches(flags
-							+ ".*?(?:http\\:\\/\\/www\\.)?flickr\\.com\\/photos\\/[^ \\n\\t\\|\\=\\&\\/]*?\\/\\/?([0-9][0-9]*).*")
-					|| text.matches(flags
-							+ ".*?(?:http\\:\\/\\/www\\.)?flickr\\.com\\/photo_zoom\\.gne\\?id\\=([0-9][0-9]*).*")
-					|| text.matches(flags
-							+ ".*?\\{\\{flickr.*?photo_id.??\\=.??([0-9]*).*?")
-					|| text.matches(flags
-							+ ".*?(?:http\\:\\/\\/)?.*?\\.static\\.flickr\\.com\\/.*?\\/([0-9]*).*?\\.jpg.*");
-			// Also check for panoramio
-			boolean matchesPanoramioPhotoID = text
-					.matches(flags
-							+ ".*?https?\\:\\/\\/(www)?\\.panoramio\\.com\\/photo\\/\\d+.*")
-					|| text.matches(flags
-							+ ".*?https?\\:\\/\\/(www)?\\.panoramio\\.com\\/user\\/\\d+\\?with_photo_id=\\d+.*");
-			// Also check for Picasa
-			boolean matchesPicasaPhotoID = text
-					.matches(flags
-							+ ".*?https?\\:\\/\\/picasaweb\\.google\\.com\\/[a-z0-9]+\\/[^#]+\\#(slideshow\\/)?\\d+.*");
-			// Also check for Mushroom Observer
-			boolean matchesMushroomObserberID = text
-					.matches(flags
-							+ ".*?https?\\:\\/\\/mushroomobserver\\.org\\/image\\/show_image\\/\\d+.*")
-					|| text.matches(flags
-							+ ".*?\\{\\{MushroomObserver[^}{]*\\}\\}.*");
-			// Also check for Forestryimages
-			boolean matchesForestryimagesID = text
-					.matches(flags
-							+ ".*?https?\\:\\/\\/(www\\.)?forestryimages\\.org\\/browse\\/detail\\.cfm\\?imgnum\\=\\d+.*")
-					|| text.matches(flags
-							+ ".*?\\{\\{Forestryimages[^}{]*\\}\\}.*");
 
-			boolean hasValidSourceOrLicense = text
-					.matches(flags
-							+ ".*?\\{\\{(flickr|Licen(s|c)eReview|User\\:FlickreviewR\\/|User\\:Flickr upload bot).*?\\}\\}.*")
-					|| text.matches(flags
-							+ ".*?\\{\\{((Permission)?OTRS|PD)[^\\]\\[\\{]*\\}\\}.*?")
-					|| text.matches(flags
-							+ ".*?\\{\\{(Extracted[ _]from|Derived[_ ]from|Retouched picture)[^\\]\\[\\{]*\\}\\}.*?")
-					|| text.matches(flags
-							+ ".*?\\{\\{(own|OGL|Narendra[ _]Modi|LGE|PossiblyPD|Icelandic[ _]currency|Icelandic[ _]stamp|Iranian[ _]currency|CC\\-(zero|0)|Anonymous[^\\]\\[\\{]*|Bild-LogoSH)\\}\\}.*")
-					|| text.matches(flags + ".*?\\[\\[:?file:.*?\\..*?\\]\\].*")
-					|| text.matches(flags
-							+ ".*?\\{\\{(Panoramioreview).*?\\}\\}.*")
-					|| text.matches(flags
-							+ ".*?\\{\\{(picasareview).*?\\}\\}.*")
-					|| text.matches(flags
-							+ ".*?\\{\\{User\\:Picasa Review Bot.*?\\}\\}.*")
-					|| text.matches(flags + ".*?\\{\\{(delete\\|).*?\\}\\}.*");
+			final boolean hasValidSourceOrLicense = Regex.VALID_SOURCE_OR_LICENSE
+					.isMatch(text);
 
-			if (matchesFlickPhotoID && !hasValidSourceOrLicense) {
-				if (!validLicense(members[i], wiki))
-					attemptFetch(new WikiAPI() {
+			for (final Regex regex : Regex.values()) {
+				if (regex.name().equals(Regex.VALID_SOURCE_OR_LICENSE.name())) {
+					continue; // Skip
+				}
+				if (regex.isMatch(text) && !hasValidSourceOrLicense) {
+					if (!validLicense(members[i], wiki))
+						attemptFetch(new WikiAPI() {
 
-						@Override
-						public Object fetch() throws IOException,
-								LoginException {
-							addTemplate("flickrreview", members[i], wiki);
-							return null;
-						}
-					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-				continue;
-			}
-
-			if (matchesPanoramioPhotoID && !hasValidSourceOrLicense) {
-				if (!validLicense(members[i], wiki))
-					attemptFetch(new WikiAPI() {
-
-						@Override
-						public Object fetch() throws IOException,
-								LoginException {
-							addTemplate("Panoramioreview", members[i], wiki);
-							return null;
-						}
-					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-				continue;
-			}
-
-			if (matchesPicasaPhotoID && !hasValidSourceOrLicense) {
-				if (!validLicense(members[i], wiki))
-					attemptFetch(new WikiAPI() {
-
-						@Override
-						public Object fetch() throws IOException,
-								LoginException {
-							addTemplate("Picasareview", members[i], wiki);
-							return null;
-						}
-					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-				continue;
-			}
-
-			if (matchesMushroomObserberID && !hasValidSourceOrLicense) {
-				if (!validLicense(members[i], wiki))
-					attemptFetch(new WikiAPI() {
-
-						@Override
-						public Object fetch() throws IOException,
-								LoginException {
-							addTemplate("LicenseReview", members[i], wiki);
-							return null;
-						}
-					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-				continue;
-			}
-
-			if (matchesForestryimagesID && !hasValidSourceOrLicense) {
-				if (!validLicense(members[i], wiki))
-					attemptFetch(new WikiAPI() {
-
-						@Override
-						public Object fetch() throws IOException,
-								LoginException {
-							addTemplate("LicenseReview", members[i], wiki);
-							return null;
-						}
-					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-				continue;
+							@Override
+							public Object fetch() throws IOException,
+									LoginException {
+								addTemplate(regex.getTemplate(), members[i],
+										wiki);
+								return null;
+							}
+						}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+					break;
+				}
 			}
 		}
+
 		// Conclude
 		DateFormat dateFormat = new SimpleDateFormat("MMMMMMMMMMMMMMMMMMMMM dd");
 		String rcStart = (dateFormat.format(new Date(System.currentTimeMillis()

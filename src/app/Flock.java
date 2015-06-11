@@ -6,21 +6,21 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.Level;
+
 import javax.security.auth.login.LoginException;
 
 import wiki.Wiki;
 import wiki.WikiPage;
 
-public class Flock {
+public class Flock extends App {
 
 	static String checkNeeded = "";
 	static int fileCounter = 0;
 	static int deleted = 0;
-	static int ioCounter = 0;
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.06.11";
+	static final String VERSION = "v15.06.12";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
@@ -85,15 +85,28 @@ public class Flock {
 	 * @throws IOException
 	 * @throws LoginException
 	 */
-	private static void crawlFlickr(Wiki wiki) throws LoginException,
+	private static void crawlFlickr(final Wiki wiki) throws LoginException,
 			IOException {
 		final String flags = "(?si)";
 		System.out.println("Fetching list of files ...");
-		String[] members = wiki.listRecentUploads(DAYS_BEGIN, DAYS_END);
-		for (int i = 0; i < members.length; ++i) {
+		final String[] members = (String[]) attemptFetch(new WikiAPI() {
+
+			@Override
+			public Object fetch() throws IOException, LoginException {
+				return wiki.listRecentUploads(DAYS_BEGIN, DAYS_END);
+			}
+		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		for (int j = 0; j < members.length; ++j) {
+			final int i = j;
 			System.out.println(i + " of " + members.length + " done. (Next: "
 					+ members[i].replace("File:", "") + ")");
-			String text = getText(members[i], wiki, 2);
+			String text = (String) attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException, LoginException {
+					return getText(members[i], wiki);
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 			if (text.length() == 0) // means the file was deleted
 				continue;
 			if (text.length() > MAX_TEXT_LENGTH) {
@@ -155,31 +168,71 @@ public class Flock {
 
 			if (matchesFlickPhotoID && !hasValidSourceOrLicense) {
 				if (!validLicense(members[i], wiki))
-					addTemplate("flickrreview", members[i], wiki, 2);
+					attemptFetch(new WikiAPI() {
+
+						@Override
+						public Object fetch() throws IOException,
+								LoginException {
+							addTemplate("flickrreview", members[i], wiki);
+							return null;
+						}
+					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 				continue;
 			}
 
 			if (matchesPanoramioPhotoID && !hasValidSourceOrLicense) {
 				if (!validLicense(members[i], wiki))
-					addTemplate("Panoramioreview", members[i], wiki, 2);
+					attemptFetch(new WikiAPI() {
+
+						@Override
+						public Object fetch() throws IOException,
+								LoginException {
+							addTemplate("Panoramioreview", members[i], wiki);
+							return null;
+						}
+					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 				continue;
 			}
 
 			if (matchesPicasaPhotoID && !hasValidSourceOrLicense) {
 				if (!validLicense(members[i], wiki))
-					addTemplate("Picasareview", members[i], wiki, 2);
+					attemptFetch(new WikiAPI() {
+
+						@Override
+						public Object fetch() throws IOException,
+								LoginException {
+							addTemplate("Picasareview", members[i], wiki);
+							return null;
+						}
+					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 				continue;
 			}
 
 			if (matchesMushroomObserberID && !hasValidSourceOrLicense) {
 				if (!validLicense(members[i], wiki))
-					addTemplate("LicenseReview", members[i], wiki, 2);
+					attemptFetch(new WikiAPI() {
+
+						@Override
+						public Object fetch() throws IOException,
+								LoginException {
+							addTemplate("LicenseReview", members[i], wiki);
+							return null;
+						}
+					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 				continue;
 			}
 
 			if (matchesForestryimagesID && !hasValidSourceOrLicense) {
 				if (!validLicense(members[i], wiki))
-					addTemplate("LicenseReview", members[i], wiki, 2);
+					attemptFetch(new WikiAPI() {
+
+						@Override
+						public Object fetch() throws IOException,
+								LoginException {
+							addTemplate("LicenseReview", members[i], wiki);
+							return null;
+						}
+					}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 				continue;
 			}
 		}
@@ -189,9 +242,14 @@ public class Flock {
 				- DAYS_BEGIN * 24 * 60 * 60 * 1000)));
 		String rcEnd = (dateFormat.format(new Date(System.currentTimeMillis()
 				- DAYS_END * 24 * 60 * 60 * 1000)));
-		String talkPageTitle = "User talk:" + MAINTAINER;
-		String reportText = "\n== Report for files uploaded between " + rcStart
-				+ " and " + rcEnd + " ==" + "\n" + "<small>["
+		final String talkPageTitle = "User talk:" + MAINTAINER;
+		final String reportText = "\n== Report for files uploaded between "
+				+ rcStart
+				+ " and "
+				+ rcEnd
+				+ " =="
+				+ "\n"
+				+ "<small>["
 				+ "skipped: "
 				+ skipped
 				+ "; " //
@@ -199,21 +257,31 @@ public class Flock {
 				+ percent(deleted, members.length)
 				+ "; "//
 				+ "IOExceptions: "
-				+ ioCounter
+				+ getExceptionCount()
 				+ ";"//
-				+ "]</small>" + "\n\n"
-				+ "Hi, I just finished my run and found '''" + fileCounter
-				+ "''' problematic instances. ";
-		if (checkNeeded.length() == 0)
-			reportText += "This time I could tag all files appropriately and I won't need your help. --~~~~";
-		else
-			reportText += "I was unsure about "
-					+ checkNeededCount
-					+ " of the files and it is up to you to have a look at them.\n"
-					+ checkNeeded + "\n--~~~~";
+				+ "]</small>"
+				+ "\n\n"
+				+ "Hi, I just finished my run and found '''"
+				+ fileCounter
+				+ "''' problematic instances. "
 
-		wiki.edit(talkPageTitle, reportText, "Report - " + BOT_NAME + " "
-				+ VERSION, -1);
+				+ (checkNeeded.length() == 0 ?
+
+				"This time I could tag all files appropriately and I won't need your help. --~~~~"
+						: "I was unsure about "
+								+ checkNeededCount
+								+ " of the files and it is up to you to have a look at them.\n"
+								+ checkNeeded + "\n--~~~~");
+
+		attemptFetch(new WikiAPI() {
+
+			@Override
+			public Object fetch() throws IOException, LoginException {
+				wiki.edit(talkPageTitle, reportText, "Report - " + BOT_NAME
+						+ " " + VERSION, -1);
+				return null;
+			}
+		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		System.out.println();
 	}
 
@@ -238,22 +306,24 @@ public class Flock {
 	 * 
 	 * @param title
 	 * @param wiki
-	 * @param maxAttemptsIO
 	 * @return the text
+	 * @throws IOException
+	 *             if a network issue occurs
+	 * @throws LoginException
 	 */
-	private static String getText(String title, Wiki wiki, int maxAttemptsIO)
+	private static String getText(final String title, final Wiki wiki)
 			throws LoginException, IOException {
-		if (maxAttemptsIO == 0) {
-			throw new IOException();
-		}
 		try {
-			return wiki.getPageText(title);
+			return (String) attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException, LoginException {
+					return wiki.getPageText(title);
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} catch (FileNotFoundException e) {
 			deleted++;
 			return "";
-		} catch (IOException ioe) {
-			ioCounter++;
-			return getText(title, wiki, maxAttemptsIO - 1);
 		}
 	}
 
@@ -263,40 +333,36 @@ public class Flock {
 	 * @param templatename
 	 * @param filepage
 	 * @param wiki
-	 * @param maxAttemptsIO
-	 *            Gives the maximum number of attempts when IOexceptions occur
 	 * @throws LoginException
 	 * @throws IOException
 	 */
 	private static void addTemplate(String templatename, String filepage,
-			Wiki wiki, int maxAttemptsIO) throws LoginException, IOException {
-		if (maxAttemptsIO == 0) {
-			throw new IOException();
-		}
-		try {
-			WikiPage target = new WikiPage(wiki, filepage);
-			target.setPlainText(target.getPlainText() + "\n{{" + templatename
-					+ "}}");
-			target.setCleanupAnyway(true);
-			target.cleanupWikitext();
-			target.cleanupOvercat(0, true);
-			target.cleanupUndercat();
-			String summary = ("External photo link detected but no "
-					+ "{{[[:template:" + templatename + "|" + templatename
-					+ "]]}} " + "template. " + target.getEditSummary())
-					.replace("Grouping categories at the bottom.", "");
-			wiki.edit(target.getName(), target.getPlainText(), summary);
-			++fileCounter;
-		} catch (IOException ioe) {
-			ioCounter++;
-			addTemplate(templatename, filepage, wiki, maxAttemptsIO - 1);
-		}
+			Wiki wiki) throws IOException, LoginException {
+		WikiPage target = new WikiPage(wiki, filepage);
+		target.setPlainText(target.getPlainText() + "\n{{" + templatename
+				+ "}}");
+		target.setCleanupAnyway(true);
+		target.cleanupWikitext();
+		target.cleanupOvercat(0, true);
+		target.cleanupUndercat();
+		String summary = ("External photo link detected but no "
+				+ "{{[[:template:" + templatename + "|" + templatename
+				+ "]]}} " + "template. " + target.getEditSummary()).replace(
+				"Grouping categories at the bottom.", "");
+		wiki.edit(target.getName(), target.getPlainText(), summary);
+		++fileCounter;
 	}
 
-	private static boolean validLicense(String filepage, Wiki wiki)
-			throws IOException {
+	private static boolean validLicense(final String filepage, final Wiki wiki)
+			throws LoginException, IOException {
 		boolean validLicence = false;
-		for (String cat : wiki.getCategories(filepage, false, false)) {
+		for (String cat : (String[]) attemptFetch(new WikiAPI() {
+
+			@Override
+			public Object fetch() throws IOException, LoginException {
+				return wiki.getCategories(filepage, false, false);
+			}
+		}, MAX_FAILS, EXCEPTION_SLEEP_TIME)) {
 			if (cat.contains("Items with OTRS permission confirmed")) {
 				validLicence = true;
 				break;

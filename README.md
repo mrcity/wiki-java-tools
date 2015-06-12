@@ -3,5 +3,8 @@
 ## [Tool-Name]
 [Tool-description]
 
+## Usage
+[Usage]
+
 ## License
 [GPLv3+](COPYING.GPL)

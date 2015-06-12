@@ -343,7 +343,7 @@ class TopBotThread extends Thread {
 				+ "\nLast update: "
 				+ DateFormat.getDateInstance(DateFormat.FULL).format(
 						now.getTime()) + "." + "\n"
-				+ "\nThis report includes the follwing categories while "
+				+ "\nThis report includes the following categories while "
 				+ "counting only the usage of each file "
 				+ "in the main namespace.\n\n" + getInfo(false)
 				+ "<gallery showfilename=yes >\n";

@@ -235,10 +235,11 @@ class CategoryTree extends Category {
 
 class TopBotThread extends Thread {
 
-	private Wiki wiki;
-	private String categoryName;
-	private Category category;
-	private ConcurrentLinkedQueue<String> logger;
+	private static final int FADE_OUT = 3 * 7;
+	private final Wiki wiki;
+	private final String categoryName;
+	private final Category category;
+	private final ConcurrentLinkedQueue<String> logger;
 
 	/**
 	 * Create a thread which can crawl a category and count each member's global
@@ -334,7 +335,7 @@ class TopBotThread extends Thread {
 		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddHHmmss");
 		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 		Date twoWeeksFromNow = now.getTime();
-		twoWeeksFromNow.setDate(now.getTime().getDate() + 3 * 7);
+		twoWeeksFromNow.setDate(now.getTime().getDate() + FADE_OUT);
 		String text = "{{#ifexpr:{{CURRENTTIMESTAMP}}>"
 				+ timestamp.format(twoWeeksFromNow)
 				+ "|{{speedy|Outdated report, which was replaced by "
@@ -418,7 +419,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.06.12";
+	public static final String VERSION = "v15.06.13";
 
 	public static void main(String[] args) {
 

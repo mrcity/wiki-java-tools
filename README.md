@@ -3,10 +3,8 @@
 ## Imker
 Batch download files from Wikimedia Commons.
 
-Instructions for using this tool can be found on the [wiki page](https://commons.wikimedia.org/wiki/Commons:Imker_downloader)
-
 ## Usage
-[Usage]
+Instructions for using this tool can be found on the [wiki page](https://commons.wikimedia.org/wiki/Commons:Imker_%28batch_download%29)
 
 ## License
 [GPLv3+](COPYING.GPL)

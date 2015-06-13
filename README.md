@@ -3,5 +3,8 @@
 ## TopBot
 Update "Top 200 ___-images that should use vector graphics"-Galleries on Wikimedia Commons
 
+## Usage
+[Usage]
+
 ## License
 [GPLv3+](COPYING.GPL)

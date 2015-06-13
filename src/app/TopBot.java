@@ -168,6 +168,7 @@ class CategoryTree extends Category {
 				// TODO result[1] already contains this.getName()-category
 			}
 			// remove duplicates
+			// TODO also remove duplicates in each reportCategory!
 			HashSet<String> uniqueSet = new HashSet<String>();
 			LinkedList<Category> noDupes = new LinkedList<Category>();
 			for (Category cat : reportCategories) {

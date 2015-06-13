@@ -165,6 +165,7 @@ class CategoryTree extends Category {
 				// create report anyway for this category
 				reportCategories.add(new Category(this.getName(), result[1]
 						.toArray(new Category[] {}), this.getFileMembers()));
+				// TODO result[1] already contains this.getName()-category
 			}
 			// remove duplicates
 			HashSet<String> uniqueSet = new HashSet<String>();

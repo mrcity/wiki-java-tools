@@ -15,7 +15,7 @@ import javax.security.auth.login.LoginException;
 
 public class WikiPage {
 	private static final String NO_TOKEN = "true";
-	private static final WikiCategory REVOKED_CATEGORY = new WikiCategory(null,
+	private static final WikiCategory REVOKED_CATEGORY = new WikiCategory("",
 			null, null);
 
 	private boolean isFile;

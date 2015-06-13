@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.TimeZone;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
 import javax.security.auth.login.LoginException;
@@ -237,7 +238,7 @@ class TopBotThread extends Thread {
 	private Wiki wiki;
 	private String categoryName;
 	private Category category;
-	private int exceptions;
+	private ConcurrentLinkedQueue<String> logger;
 
 	/**
 	 * Create a thread which can crawl a category and count each member's global
@@ -248,12 +249,13 @@ class TopBotThread extends Thread {
 	 * @param category
 	 *            the category to crawl (may or may not start with "Category:")
 	 */
-	public TopBotThread(Wiki wiki, Category category) {
+	public TopBotThread(Wiki wiki, Category category,
+			ConcurrentLinkedQueue<String> logger) {
 		this.wiki = wiki;
 		this.categoryName = category.getName().replaceFirst(
 				"(?i)^" + Category.CATEGORY_PREFIX, "");
 		this.category = category;
-		exceptions = 0;
+		this.logger = logger;
 
 		System.out.println(getInfo(true));
 	}
@@ -281,37 +283,32 @@ class TopBotThread extends Thread {
 	}
 
 	/**
-	 * Try to crawl the category and return right after the second exception
-	 * occurs
+	 * Try to crawl the category and return if too many exceptions occur
 	 */
 	public void run() {
-		if (exceptions == 2) {
-			System.out.println(this.getName() + " shut down after "
-					+ exceptions + " exceptions. (" + categoryName + ")");
-			return;
-		}
 		try {
-			System.out.println(this.getName() + "   START");
-			crawlCategory();
-			System.out.println(this.getName() + "   END");
-		} catch (LoginException | IOException e) {
-			e.printStackTrace();
-			exceptions++;
-			run();
-		}
+			final String name = this.getName();
+			App.attemptFetch(new WikiAPI() {
 
+				@Override
+				public Object fetch() throws IOException, LoginException {
+					System.out.println(name + "   START");
+					crawlCategory();
+					System.out.println(name + "   END");
+					return null;
+				}
+			}, App.MAX_FAILS, App.EXCEPTION_SLEEP_TIME);
+
+			logger.add(this.getName() + " shut down successfully.");
+		} catch (LoginException | IOException e) {
+			logger.add(this.getName() + " shut down after " + App.MAX_FAILS
+					+ " exceptions. (" + categoryName + ")");
+		}
 	}
 
 	/**
 	 * Count usage and write to page
 	 * 
-	 * @param wiki
-	 *            Target wiki
-	 * @param categoryName
-	 *            Target category (Ex.: 'Flag images that should use vector
-	 *            graphics')
-	 * @param number
-	 *            The number of top files to list
 	 * @throws IOException
 	 * @throws LoginException
 	 */
@@ -337,7 +334,7 @@ class TopBotThread extends Thread {
 		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddHHmmss");
 		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
 		Date twoWeeksFromNow = now.getTime();
-		twoWeeksFromNow.setDate(now.getTime().getDate() + 14);
+		twoWeeksFromNow.setDate(now.getTime().getDate() + 3 * 7);
 		String text = "{{#ifexpr:{{CURRENTTIMESTAMP}}>"
 				+ timestamp.format(twoWeeksFromNow)
 				+ "|{{speedy|Outdated report, which was replaced by "
@@ -443,14 +440,22 @@ public class TopBot {
 
 			System.out.println("Creating threads ...");
 
-			// Create threads
+			// Create threads and logger
+			ConcurrentLinkedQueue<String> loggerQueue = new ConcurrentLinkedQueue<String>();
 			TopBotThread[] threads = new TopBotThread[reportCats.size()];
 			for (int j = 0; j < threads.length; j++) {
-				threads[j] = new TopBotThread(commons, reportCats.get(j));
+				threads[j] = new TopBotThread(commons, reportCats.get(j),
+						loggerQueue);
 			}
 			Thread.sleep(1000);
 			for (TopBotThread t : threads) {
 				t.start();
+			}
+
+			// Finalize
+			for (TopBotThread t : threads) {
+				t.join();
+				System.out.println(loggerQueue.remove());
 			}
 		} catch (LoginException | IOException | InterruptedException e) {
 			e.printStackTrace();

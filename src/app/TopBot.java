@@ -420,7 +420,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.05.29";
+	public static final String VERSION = "v15.06.12";
 
 	public static void main(String[] args) {
 

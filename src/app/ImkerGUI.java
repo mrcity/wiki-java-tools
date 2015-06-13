@@ -51,24 +51,8 @@ import javax.swing.border.TitledBorder;
 
 import wiki.Wiki;
 
-class State {
-	protected static final int PRE_INIT = 11;
-	protected static final int PRE_DOWNLOAD = 12;
-	protected static final int TERMINATED = 13;
-
-	private int state;
-
-	protected State(int state) {
-		this.setState(state);
-	}
-
-	protected int getState() {
-		return state;
-	}
-
-	protected void setState(int state) {
-		this.state = state;
-	}
+enum State {
+	PRE_INIT, PRE_DOWNLOAD, TERMINATED
 }
 
 public class ImkerGUI extends ImkerBase {
@@ -85,7 +69,7 @@ public class ImkerGUI extends ImkerBase {
 	private static final JRadioButton CATEGORY_BUTTON = new JRadioButton(
 			MSGS.getString("Text_Category"));
 	private static final JTextField STATUS_TEXT_FIELD = new JTextField(45);
-	private static State state = new State(State.PRE_INIT);
+	private static State state = State.PRE_INIT;
 	private static boolean hasSource = false;
 	private static boolean hasTarget = false;
 
@@ -95,15 +79,15 @@ public class ImkerGUI extends ImkerBase {
 	 * Decide which action to execute after the main button was pressed
 	 */
 	protected static void handleAction() {
-		switch (state.getState()) {
-		case State.PRE_INIT:
+		switch (state) {
+		case PRE_INIT:
 			initialize();
 			break;
-		case State.PRE_DOWNLOAD:
+		case PRE_DOWNLOAD:
 			download();
 			// TODO verifyCheckSum();
 			break;
-		case State.TERMINATED:
+		case TERMINATED:
 			preInit(true);
 			break;
 		default:
@@ -120,7 +104,7 @@ public class ImkerGUI extends ImkerBase {
 		if (!verifyInput()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Error_Invalid_Input"));
 			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
-			state.setState(State.TERMINATED);
+			state = State.TERMINATED;
 			return;
 		}
 		try {
@@ -152,14 +136,14 @@ public class ImkerGUI extends ImkerBase {
 							JOptionPane.WARNING_MESSAGE);
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Error_No_Files"));
 			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
-			state.setState(State.TERMINATED);
+			state = State.TERMINATED;
 			return;
 		}
 		STATUS_TEXT_FIELD.setText(String.format(
 				MSGS.getString("Prompt_Download"), fileNames.length));
 		MAIN_BUTTON.setText(String.format(MSGS.getString("Button_Download"),
 				fileNames.length));
-		state.setState(State.PRE_DOWNLOAD);
+		state = State.PRE_DOWNLOAD;
 	}
 
 	/**
@@ -188,7 +172,7 @@ public class ImkerGUI extends ImkerBase {
 				JOptionPane.ERROR_MESSAGE);
 		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Exception_Caught"));
 		MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
-		state.setState(State.TERMINATED);
+		state = State.TERMINATED;
 	}
 
 	/**
@@ -345,7 +329,7 @@ public class ImkerGUI extends ImkerBase {
 					});
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Run_Complete"));
 			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
-			state.setState(State.TERMINATED);
+			state = State.TERMINATED;
 		} catch (Exception e) {
 			terminate(e);
 			return;
@@ -360,12 +344,12 @@ public class ImkerGUI extends ImkerBase {
 	 *            ignore the current state
 	 */
 	private static void preInit(boolean force) {
-		if (!force && state.getState() == State.TERMINATED)
+		if (!force && state == State.TERMINATED)
 			return;
 		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Select_InOut"));
 		MAIN_BUTTON.setText(MSGS.getString("Button_GetList"));
 		fileNames = null;
-		state.setState(State.PRE_INIT);
+		state = State.PRE_INIT;
 	}
 
 	/**

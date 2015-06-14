@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -85,8 +86,14 @@ public class ImkerGUI extends ImkerBase {
 			initialize();
 			break;
 		case PRE_DOWNLOAD:
-			download();
-			// TODO verifyCheckSum();
+			try {
+				download();
+				verifyCheckSum();
+				state = State.TERMINATED;
+			} catch (Exception e) {
+				terminate(e);
+				return;
+			}
 			break;
 		case TERMINATED:
 			preInit(true);
@@ -156,6 +163,9 @@ public class ImkerGUI extends ImkerBase {
 	 *            the exception that occurred
 	 */
 	private static void terminate(Exception e) {
+
+		e.printStackTrace();
+
 		String title = "[Imker] Exception";
 		try {
 			title = URLEncoder.encode(title, "UTF-8");
@@ -163,7 +173,7 @@ public class ImkerGUI extends ImkerBase {
 		}
 		JTextArea ep = new JTextArea(e.toString() + "\n"
 				+ MSGS.getString("Hint_Github_Issue") + "\n"
-				+ String.format(githubIssueTracker, title, ""));
+				+ String.format(GITHUB_ISSUE_TRACKER, title, ""));
 		ep.setEditable(false);
 		ep.setFocusable(true);
 		ep.setFont(new JLabel().getFont());
@@ -295,48 +305,90 @@ public class ImkerGUI extends ImkerBase {
 
 	/**
 	 * Try to download while blocking the UI with a modal dialog
+	 * 
+	 * @throws Exception
 	 */
-	private static void download() {
-		try {
-			final JProgressBar progressBarDownload = new JProgressBar(0,
-					fileNames.length);
-			progressBarDownload.setStringPainted(true);
-			executeWorker(MSGS.getString("Status_Downloading"),
-					MSGS.getString("Hint_Downloading"), progressBarDownload,
-					MSGS.getString("Text_Exit"), new SwingWorker<Void, Void>() {
+	private static void download() throws Exception {
+		final JProgressBar progressBarDownload = new JProgressBar(0,
+				fileNames.length);
+		progressBarDownload.setStringPainted(true);
+		executeWorker(MSGS.getString("Status_Downloading"),
+				MSGS.getString("Hint_Downloading"), progressBarDownload,
+				MSGS.getString("Text_Exit"), new SwingWorker<Void, Void>() {
 
-						@Override
-						protected Void doInBackground()
-								throws FileNotFoundException, IOException,
-								LoginException {
-							downloadLoop(new DownloadStatusHandler() {
+					@Override
+					protected Void doInBackground()
+							throws FileNotFoundException, IOException,
+							LoginException {
+						downloadLoop(new StatusHandler() {
 
-								@Override
-								public void handle1(int i, String fileName) {
-									progressBarDownload.setValue(i);
-									STATUS_TEXT_FIELD.setText("(" + (i + 1)
-											+ "/" + fileNames.length + "): "
-											+ fileName);
-								}
+							@Override
+							public void handle(int i, String fileName) {
+								progressBarDownload.setValue(i);
+								STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/"
+										+ fileNames.length + "): " + fileName);
+							}
 
-								@Override
-								public void handle2(String status) {
-									// TODO invisible (instant redraw)
-									// STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
-									// .getText() + status);
-								}
+							@Override
+							public void handleConclusion(String status) {
+								// TODO invisible (instant redraw)
+								// STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
+								// .getText() + status);
+							}
 
-							});
-							return null;
-						}
-					});
-			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Run_Complete"));
-			MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
-			state = State.TERMINATED;
-		} catch (Exception e) {
-			terminate(e);
-			return;
-		}
+						});
+						return null;
+					}
+				});
+		// TODO invisible (instantly overwritten by verifyCheckSum()
+		// STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Download_Complete"));
+		// MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
+	}
+
+	/**
+	 * Try to verify the checksums while blocking the UI with a modal dialog
+	 * 
+	 * @throws Exception
+	 */
+	private static void verifyCheckSum() throws Exception {
+		final int errors[] = new int[1];
+		final JProgressBar progressBarChecksum = new JProgressBar(0,
+				fileStatuses.length);
+		progressBarChecksum.setStringPainted(true);
+		executeWorker(MSGS.getString("Status_Checksum"),
+				MSGS.getString("Hint_Checksum"), progressBarChecksum,
+				MSGS.getString("Text_Exit"), new SwingWorker<Void, Void>() {
+
+					@Override
+					protected Void doInBackground()
+							throws FileNotFoundException,
+							NoSuchAlgorithmException, IOException {
+						errors[0] = checksumLoop(new StatusHandler() {
+
+							@Override
+							public void handle(int i, String fileName) {
+								progressBarChecksum.setValue(i);
+								STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/"
+										+ fileStatuses.length + "): "
+										+ fileName);
+							}
+
+							@Override
+							public void handleConclusion(String conclusion) {
+								// TODO invisible (instant redraw)
+								// STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
+								// .getText() + conclusion);
+							}
+
+						});
+						return null;
+					}
+				});
+		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Checksum_Complete"));
+		MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
+
+		// TODO!
+		System.out.println("Files with errors: " + errors[0]);
 	}
 
 	/**
@@ -394,6 +446,7 @@ public class ImkerGUI extends ImkerBase {
 					+ " ...");
 			fileNames = parseFileNames(inputFile.getPath());
 		}
+		fileStatuses = new FileStatus[fileNames.length];
 	}
 
 	/**

@@ -54,16 +54,16 @@ public class ImkerCLI extends ImkerBase {
 				+ MSGS.getString("Prompt_Enter"));
 		System.in.read();
 
-		downloadLoop(new DownloadStatusHandler() {
+		downloadLoop(new StatusHandler() {
 
 			@Override
-			public void handle1(int i, String fileName) {
+			public void handle(int i, String fileName) {
 				System.out.println("(" + (i + 1) + "/" + fileNames.length
 						+ "): " + fileName);
 			}
 
 			@Override
-			public void handle2(String status2) {
+			public void handleConclusion(String status2) {
 				System.out.println(status2);
 			}
 		});
@@ -111,7 +111,7 @@ public class ImkerCLI extends ImkerBase {
 	 *             if the file parameter points to a missing file
 	 * @throws IOException
 	 *             if a IO issue occurs (network or file related)
-	 * @throws LoginException 
+	 * @throws LoginException
 	 */
 	private static String[] getFilenames(String inputArg)
 			throws FileNotFoundException, IOException, LoginException {
@@ -121,9 +121,10 @@ public class ImkerCLI extends ImkerBase {
 		int fileIndex = inputArg.indexOf(FILE_PARAM);
 
 		final String arg;
+		final String[] fnames;
 		if (catIndex > 0) {
 			arg = inputArg.substring(catIndex + CATEGORY_PARAM.length());
-			return (String[]) attemptFetch(new WikiAPI() {
+			fnames = (String[]) attemptFetch(new WikiAPI() {
 
 				@Override
 				public String[] fetch() throws IOException {
@@ -134,7 +135,7 @@ public class ImkerCLI extends ImkerBase {
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} else if (pageIndex > 0) {
 			arg = inputArg.substring(pageIndex + PAGE_PARAM.length());
-			return (String[]) attemptFetch(new WikiAPI() {
+			fnames = (String[]) attemptFetch(new WikiAPI() {
 
 				@Override
 				public String[] fetch() throws IOException {
@@ -143,14 +144,15 @@ public class ImkerCLI extends ImkerBase {
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} else if (fileIndex > 0) {
 			arg = inputArg.substring(fileIndex + FILE_PARAM.length());
-			return readFileNames(arg);
+			fnames = readFileNames(arg);
 		} else {
 			// exit and warn user
 			printHelp(null);
 			System.exit(-1);
 			return null;
 		}
-
+		fileStatuses = new FileStatus[fnames.length];
+		return fnames;
 	}
 
 	/**

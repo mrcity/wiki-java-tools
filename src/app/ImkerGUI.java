@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
@@ -384,11 +385,53 @@ public class ImkerGUI extends ImkerBase {
 						return null;
 					}
 				});
-		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Checksum_Complete"));
+		STATUS_TEXT_FIELD.setText(String.format(
+				MSGS.getString("Status_Checksum_Complete"), errors[0]));
 		MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
 
-		// TODO!
-		System.out.println("Files with errors: " + errors[0]);
+		if (errors[0] == 0)
+			return;
+
+		String errorSample = "";
+		int maxLines = 10;
+		int currLines = 0;
+		for (int i = 0; i < fileStatuses.length; i++) {
+			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR)
+				if (currLines < maxLines) {
+					errorSample += "\n * " + fileNames[i];
+					currLines++;
+				} else {
+					errorSample += "\n ...";
+					break;
+				}
+		}
+
+		String[] options = new String[] { "Yes, DELETE files", "No" };
+		int optionResult = JOptionPane
+				.showOptionDialog(
+						FRAME,
+						String.format(
+								"%d files with errors. Do you want to delete them and try a fresh download?",
+								errors[0])
+								+ errorSample, "Checksum Warning - Imker",
+						JOptionPane.YES_NO_OPTION,
+						JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
+
+		if (optionResult == 1)
+			return; // Selected "No"
+
+		for (int i = 0; i < fileStatuses.length; i++) {
+			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR)
+				Files.delete(new File(outputFolder.getPath() + File.separator
+						+ fileNames[i].substring(FILE_PREFIX.length()))
+						.toPath());
+		}
+
+		STATUS_TEXT_FIELD
+				.setText("Deletion of corrupted files complete. Reset needed!");
+		JOptionPane.showMessageDialog(FRAME,
+				"Click the reset button and start a fresh download.",
+				"Info - Imker", JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	/**

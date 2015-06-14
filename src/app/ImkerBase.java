@@ -151,11 +151,10 @@ public class ImkerBase extends App {
 			final String fileName = fileNames[i]
 					.substring(FILE_PREFIX.length());
 			sh.handle(i, fileName);
-			final File outputFile = new File(outputFolder.getPath()
-					+ File.separator + fileName);
 			if (fileStatuses[i] == FileStatus.DOWNLOADED) {
 
-				String localSHA1 = calcSHA1(outputFile);
+				String localSHA1 = calcSHA1(new File(outputFolder.getPath()
+						+ File.separator + fileName));
 				String wikiSHA1 = ((String) wiki.getFileMetadata(fileName).get(
 						"sha1")).toUpperCase();
 

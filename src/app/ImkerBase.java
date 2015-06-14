@@ -34,7 +34,7 @@ interface DownloadStatusHandler {
 }
 
 public class ImkerBase extends App {
-	protected static final String VERSION = "v15.05.16";
+	protected static final String VERSION = "v15.06.14";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String githubIssueTracker = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",

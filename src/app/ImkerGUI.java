@@ -404,6 +404,7 @@ public class ImkerGUI extends ImkerBase {
 		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Select_InOut"));
 		MAIN_BUTTON.setText(MSGS.getString("Button_GetList"));
 		fileNames = null;
+		fileStatuses = null;
 		state = State.PRE_INIT;
 	}
 

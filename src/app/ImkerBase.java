@@ -101,8 +101,8 @@ public class ImkerBase extends App {
 	protected static void downloadLoop(StatusHandler sh) throws IOException,
 			LoginException {
 		for (int i = 0; i < fileNames.length; i++) {
-			final String fileName = fileNames[i].substring(FILE_PREFIX
-					.length());
+			final String fileName = fileNames[i]
+					.substring(FILE_PREFIX.length());
 			sh.handle(i, fileName);
 			final File outputFile = new File(outputFolder.getPath()
 					+ File.separator + fileName);
@@ -148,8 +148,8 @@ public class ImkerBase extends App {
 			throws FileNotFoundException, NoSuchAlgorithmException, IOException {
 		int errors = 0;
 		for (int i = 0; i < fileStatuses.length; i++) {
-			final String fileName = fileNames[i].substring(FILE_PREFIX
-					.length());
+			final String fileName = fileNames[i]
+					.substring(FILE_PREFIX.length());
 			sh.handle(i, fileName);
 			final File outputFile = new File(outputFolder.getPath()
 					+ File.separator + fileName);
@@ -195,14 +195,12 @@ public class ImkerBase extends App {
 		MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
 		try (InputStream input = new FileInputStream(file)) {
 
-			if (input.available() != 0) {
-				byte[] buffer = new byte[8192];
-				int len = input.read(buffer);
+			byte[] buffer = new byte[8192];
+			int len = input.read(buffer);
 
-				do {
-					sha1.update(buffer, 0, len);
-					len = input.read(buffer);
-				} while (len > 0);
+			while (len != -1) {
+				sha1.update(buffer, 0, len);
+				len = input.read(buffer);
 			}
 
 			return new HexBinaryAdapter().marshal(sha1.digest());

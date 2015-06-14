@@ -68,7 +68,7 @@ public class ImkerCLI extends ImkerBase {
 			}
 		});
 
-		System.out.println("\n" + MSGS.getString("Status_Run_Complete"));
+		System.out.println("\n" + MSGS.getString("Status_Download_Complete"));
 	}
 
 	/**

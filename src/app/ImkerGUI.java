@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
+import javax.security.auth.login.LoginException;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -119,7 +120,8 @@ public class ImkerGUI extends ImkerBase {
 
 						@Override
 						protected Void doInBackground()
-								throws FileNotFoundException, IOException {
+								throws FileNotFoundException, IOException,
+								LoginException {
 							getFileNames();
 							return null;
 						}
@@ -305,7 +307,8 @@ public class ImkerGUI extends ImkerBase {
 
 						@Override
 						protected Void doInBackground()
-								throws FileNotFoundException, IOException {
+								throws FileNotFoundException, IOException,
+								LoginException {
 							downloadLoop(new DownloadStatusHandler() {
 
 								@Override
@@ -359,9 +362,10 @@ public class ImkerGUI extends ImkerBase {
 	 *             if the local file is not found
 	 * @throws IOException
 	 *             if an IO issue occurs
+	 * @throws LoginException
 	 */
 	protected static void getFileNames() throws FileNotFoundException,
-			IOException {
+			IOException, LoginException {
 		if (CATEGORY_BUTTON.isSelected()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Category")
 					+ " ...");

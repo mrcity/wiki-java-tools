@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.logging.Level;
 
+import javax.security.auth.login.LoginException;
+
 import wiki.Wiki;
 
 public class ImkerCLI extends ImkerBase {
@@ -14,7 +16,7 @@ public class ImkerCLI extends ImkerBase {
 	private static final String OUT_PARAM = "-outfolder=";
 
 	public static void main(String[] args) throws FileNotFoundException,
-			IOException {
+			IOException, LoginException {
 
 		System.out.println(PROGRAM_NAME);
 		System.out.println(MSGS.getString("Description_Program"));
@@ -38,8 +40,9 @@ public class ImkerCLI extends ImkerBase {
 	 * 
 	 * @throws IOException
 	 *             if a network error occurs
+	 * @throws LoginException
 	 */
-	private static void download() throws IOException {
+	private static void download() throws IOException, LoginException {
 
 		System.out.println("\n"
 				+ MSGS.getString("Text_Folder")
@@ -108,9 +111,10 @@ public class ImkerCLI extends ImkerBase {
 	 *             if the file parameter points to a missing file
 	 * @throws IOException
 	 *             if a IO issue occurs (network or file related)
+	 * @throws LoginException 
 	 */
 	private static String[] getFilenames(String inputArg)
-			throws FileNotFoundException, IOException {
+			throws FileNotFoundException, IOException, LoginException {
 
 		int catIndex = inputArg.indexOf(CATEGORY_PARAM);
 		int pageIndex = inputArg.indexOf(PAGE_PARAM);

@@ -10,6 +10,8 @@ import java.util.Locale;
 import java.util.Queue;
 import java.util.ResourceBundle;
 
+import javax.security.auth.login.LoginException;
+
 import wiki.Wiki;
 
 interface DownloadStatusHandler {
@@ -83,9 +85,10 @@ public class ImkerBase extends App {
 	 *            the status handler to call
 	 * @throws IOException
 	 *             if an io error (network or file related) occurs
+	 * @throws LoginException 
 	 */
 	protected static void downloadLoop(DownloadStatusHandler sh)
-			throws IOException {
+			throws IOException, LoginException {
 		for (int i = 0; i < fileNames.length; i++) {
 			final String fileName = fileNames[i].substring("File:".length());
 			sh.handle1(i, fileName);

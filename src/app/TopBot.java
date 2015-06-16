@@ -419,7 +419,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.06.13";
+	public static final String VERSION = "v15.06.16";
 
 	public static void main(String[] args) {
 
@@ -454,10 +454,13 @@ public class TopBot {
 			}
 
 			// Finalize
-			for (TopBotThread t : threads) {
+			for (TopBotThread t : threads)
 				t.join();
+			for (TopBotThread t : threads)
 				System.out.println(loggerQueue.remove());
-			}
+
+			System.out.println("Total number of exceptions: "
+					+ App.getExceptionCount());
 		} catch (LoginException | IOException | InterruptedException e) {
 			e.printStackTrace();
 		}

@@ -48,4 +48,6 @@ Cleanup file pages on Wikimedia Commons
 ##{Template}
 The template which is used for all the above Bots and programs. Just create a new class extending App.java and you are good to go.
 
+This template is also the place to merge upstream changes from the wiki-java library before they get merged to each branch. Moreover, all changes to the [commonly used library files](https://github.com/MarcoFalke/wiki-java-tools/tree/master-base/src/wiki) should be mirrored in this branch.
+
 ↳ [{Template}](https://github.com/MarcoFalke/wiki-java-tools/tree/master-base)

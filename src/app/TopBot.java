@@ -7,7 +7,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -53,6 +52,27 @@ class Category extends WikiCategory {
 	@Override
 	public Category[] getChildren() {
 		return (Category[]) super.getChildren();
+	}
+
+	/**
+	 * This WikiCategory is equal to another WikiCategory only if their names
+	 * are equal
+	 */
+	@Override
+	public boolean equals(Object o) {
+		if (this == o)
+			return true;
+		if (!(o instanceof WikiCategory))
+			return false;
+		return ((WikiCategory) o).getName().equals(this.getName());
+	}
+
+	/**
+	 * Return the hashCode of the name of this WikiCategory
+	 */
+	@Override
+	public int hashCode() {
+		return this.getName().hashCode();
 	}
 
 	/**
@@ -160,28 +180,10 @@ class CategoryTree extends Category {
 	 */
 	public LinkedList<Category> getReportCategories() {
 		if (reportCategories == null) {
-			LinkedList<Category>[] result = determineReportCategories();
-			reportCategories = result[0];
-			if (!this.createsReport()) {
-				// create report anyway for this category
-				reportCategories.add(new Category(this.getName(), result[1]
-						.toArray(new Category[] {}), this.getFileMembers()));
-				// TODO result[1] already contains this.getName()-category
-			}
-			// remove duplicates
-			// TODO also remove duplicates in each reportCategory!
-			HashSet<String> uniqueSet = new HashSet<String>();
-			LinkedList<Category> noDupes = new LinkedList<Category>();
-			for (Category cat : reportCategories) {
-				if (!uniqueSet.contains(cat.getName())) {
-					noDupes.add(cat);
-					uniqueSet.add(cat.getName());
-				} else {
-					System.out.println("Warning: Duplicate " + cat.getName());
-					// TODO logger
-				}
-			}
-			reportCategories = noDupes;
+			reportCategories = determineReportCategories(true)[0];
+
+			// TODO remove duplicates within each reportCategory
+
 		}
 		return reportCategories;
 	}
@@ -191,11 +193,14 @@ class CategoryTree extends Category {
 	 * create a LinkedList with all categories which will produce a report;
 	 * Create another LinkedList of the remaining
 	 * 
+	 * @param forceReport
+	 *            if a report should be created in any case for this category
+	 * 
 	 * @return the LinkedList array with the first entry being the LinkedList
 	 *         which produces the reports and the second entry being the
 	 *         remaining
 	 */
-	private LinkedList<Category>[] determineReportCategories() {
+	private LinkedList<Category>[] determineReportCategories(boolean forceReport) {
 		if (getChildren() == null || getChildren().length == 0) {
 			LinkedList<Category> leafNode = new LinkedList<Category>();
 			leafNode.add(this);
@@ -208,27 +213,39 @@ class CategoryTree extends Category {
 						new LinkedList<Category>(), leafNode };
 		}
 
-		LinkedList<Category> kidNodesReport = new LinkedList<Category>();
+		LinkedList<Category> kidNodesDoReport = new LinkedList<Category>();
 		LinkedList<Category> kidNodesNoReport = new LinkedList<Category>();
 		for (CategoryTree kid : getChildren()) {
-			LinkedList<Category>[] kidResult = kid.determineReportCategories();
+			LinkedList<Category>[] kidResult = kid
+					.determineReportCategories(false);
 			// Just copy all previously determined reports
-			kidNodesReport.addAll(kidResult[0]);
+			kidNodesDoReport.addAll(kidResult[0]);
 			// Just save all other for later
 			kidNodesNoReport.addAll(kidResult[1]);
 		}
-		if (this.createsReport()) {
-			// create new category with all kids in one array
-			Category pruned = new Category(this.getName(),
-					kidNodesNoReport.toArray(new Category[] {}),
-					this.getFileMembers());
-			kidNodesReport.add(pruned);
+
+		if (this.createsReport() || forceReport) {
+			if (!kidNodesDoReport.contains(this)) {
+				// create new category with all kids in one array
+				Category pruned = new Category(this.getName(),
+						kidNodesNoReport.toArray(new Category[] {}),
+						this.getFileMembers());
+				kidNodesDoReport.add(pruned);
+			} else {
+				System.out.println("Warning: Duplicate " + this.getName());
+				// TODO logger
+			}
 			// start from scratch with grouping
 			kidNodesNoReport = new LinkedList<Category>();
 		} else {
-			kidNodesNoReport.add(this);
+			if (!kidNodesNoReport.contains(this))
+				kidNodesNoReport.add(this);
+			else
+				// TODO logger
+				System.out.println("Warning: Duplicate " + this.getName());
 		}
-		return (LinkedList<Category>[]) new LinkedList<?>[] { kidNodesReport,
+
+		return (LinkedList<Category>[]) new LinkedList<?>[] { kidNodesDoReport,
 				kidNodesNoReport };
 	}
 }
@@ -419,7 +436,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.06.16";
+	public static final String VERSION = "v15.06.18";
 
 	public static void main(String[] args) {
 
@@ -456,7 +473,7 @@ public class TopBot {
 			// Finalize
 			for (TopBotThread t : threads)
 				t.join();
-			for (TopBotThread t : threads)
+			for (int i = 0; i < threads.length; i++)
 				System.out.println(loggerQueue.remove());
 
 			System.out.println("Total number of exceptions: "

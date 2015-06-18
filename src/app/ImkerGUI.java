@@ -406,18 +406,16 @@ public class ImkerGUI extends ImkerBase {
 				}
 		}
 
-		String[] options = new String[] { "Yes, DELETE files", "No" };
-		int optionResult = JOptionPane
-				.showOptionDialog(
-						FRAME,
-						String.format(
-								"%d files with errors. Do you want to delete them and try a fresh download?",
-								errors[0])
-								+ errorSample, "Checksum Warning - Imker",
-						JOptionPane.YES_NO_OPTION,
-						JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
+		String[] options = new String[] { MSGS.getString("Button_Delete"),
+				MSGS.getString("Button_Option_No") };
+		int userSelection = JOptionPane.showOptionDialog(FRAME,
+				String.format(MSGS.getString("Hint_Files_Corrupt"), errors[0])
+						+ errorSample,
+				MSGS.getString("Status_Checksum_Warning") + " - "
+						+ PROGRAM_NAME, JOptionPane.YES_NO_OPTION,
+				JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
 
-		if (optionResult == 1)
+		if (userSelection == 1)
 			return; // Selected "No"
 
 		for (int i = 0; i < fileStatuses.length; i++) {
@@ -427,11 +425,11 @@ public class ImkerGUI extends ImkerBase {
 						.toPath());
 		}
 
-		STATUS_TEXT_FIELD
-				.setText("Deletion of corrupted files complete. Reset needed!");
+		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Checksum_Deleted"));
 		JOptionPane.showMessageDialog(FRAME,
-				"Click the reset button and start a fresh download.",
-				"Info - Imker", JOptionPane.INFORMATION_MESSAGE);
+				MSGS.getString("Status_Reset_Needed"),
+				MSGS.getString("Title_Info") + " - " + PROGRAM_NAME,
+				JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	/**

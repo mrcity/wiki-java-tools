@@ -1,6 +1,6 @@
 [← Go back to see all tools](https://github.com/MarcoFalke/wiki-java-tools#wiki-tools)
 
-## Imker
+## Imker ![alt logo](src/pics/icon-32.png) 
 Batch download files from Wikimedia Commons.
 
 ## Usage

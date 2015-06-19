@@ -87,7 +87,7 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.06.13";
+	static final String VERSION = "v15.06.14";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
@@ -178,6 +178,7 @@ public class Flock extends App {
 			if (text.length() == 0) // means the file was deleted
 				continue;
 			if (text.length() > MAX_TEXT_LENGTH) {
+				checkNeeded = checkNeeded + "*[[:" + members[i] + "]] (skipped)\n";
 				skipped++;
 				continue;
 			}

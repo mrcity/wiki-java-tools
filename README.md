@@ -4,7 +4,7 @@
 Clean up Wikimedia Commons pages
 
 ## Usage
-[Usage]
-
+Can be compiled into a ```.jar``` file and executed via ```java -jar yacbot.jar``` 
+ 
 ## License
 [GPLv3+](COPYING.GPL)

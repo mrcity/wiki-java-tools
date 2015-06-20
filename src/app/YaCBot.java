@@ -10,10 +10,40 @@ import wiki.Wiki;
 import wiki.WikiPage;
 
 public class YaCBot {
+	private static final String VERSION = "v15.06.03";
 
 	public static void main(String[] args) {
 
-		System.out.println("v15.06.02");
+		char[] password = passwordDialog(args);
+
+		Wiki commons = new Wiki("commons.wikimedia.org");
+		try {
+			commons.login(args[0], password);
+			password = null;
+			// Minimum time between edits in ms
+			commons.setThrottle(3 * 1000);
+			// Pause bot if lag is greater than ... in s
+			commons.setMaxLag(3);
+			commons.setMarkMinor(true);
+			commons.setMarkBot(true);
+			commons.setLogLevel(Level.WARNING);
+			cleanup(commons, args[1]);
+		} catch (LoginException | IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Verify the command line arguments and print program information while
+	 * asking for the user's password
+	 * 
+	 * @param args
+	 *            the command line arguments
+	 * @return the password
+	 */
+	private static char[] passwordDialog(String[] args) {
+
+		System.out.println(VERSION);
 
 		String[] expectedArgs = { "username", "continueKey" };
 		String[] expectedArgsDescription = {
@@ -29,22 +59,8 @@ public class YaCBot {
 				System.out.println("Where " + i);
 			System.exit(-1);
 		}
-		Wiki commons = new Wiki("commons.wikimedia.org");
-		try {
-			System.out.println("Please type in the password for " + args[0]
-					+ ".");
-			commons.login(args[0], System.console().readPassword());
-			// Minimum time between edits in ms
-			commons.setThrottle(3 * 1000);
-			// Pause bot if lag is greater than ... in s
-			commons.setMaxLag(3);
-			commons.setMarkMinor(true);
-			commons.setMarkBot(true);
-			commons.setLogLevel(Level.WARNING);
-			cleanup(commons, args[1]);
-		} catch (LoginException | IOException e) {
-			e.printStackTrace();
-		}
+		System.out.println("Please type in the password for " + args[0] + ".");
+		return System.console().readPassword();
 	}
 
 	/**

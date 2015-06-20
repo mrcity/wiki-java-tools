@@ -13,7 +13,7 @@ public class YaCBot {
 
 	public static void main(String[] args) {
 
-		System.out.println("v15.06.01");
+		System.out.println("v15.06.02");
 
 		String[] expectedArgs = { "username", "continueKey" };
 		String[] expectedArgsDescription = {

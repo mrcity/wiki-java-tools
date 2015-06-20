@@ -3,5 +3,8 @@
 ## GIFburner
 Burn down GIFs at Wikimedia Commons
 
+## Usage
+[Usage]
+
 ## License
 [GPLv3+](COPYING.GPL)

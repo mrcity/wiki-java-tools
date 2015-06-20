@@ -172,7 +172,7 @@ public class WikiPage {
 			}
 			text[i] = textPart;
 		}
-		if (!getPlainText().matches(".*?\\{\\{\\s*int:filedesc\\s*\\}\\}.*?")) {
+		if (!getPlainText().matches("(?ius).*?\\{\\{\\s*int:filedesc\\s*\\}\\}.*?")) {
 			this.setPlainText("== {{int:filedesc}} ==\n" + getPlainText());
 			appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
 		}

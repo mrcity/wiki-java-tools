@@ -18,6 +18,7 @@ interface WikiAPI {
 }
 
 public class App {
+	private static int exceptionCount = 0;
 	protected static final int MAX_FAILS = 3;
 	protected static final int EXCEPTION_SLEEP_TIME = 30 * 1000; // ms
 
@@ -43,6 +44,7 @@ public class App {
 		try {
 			return api.fetch();
 		} catch (IOException e) {
+			exceptionCount++;
 			if (maxFails == 0) {
 				throw e;
 			} else {
@@ -53,5 +55,9 @@ public class App {
 				return attemptFetch(api, maxFails, maxExceptionSleepTime);
 			}
 		}
+	}
+
+	public static int getExceptionCount() {
+		return exceptionCount;
 	}
 }

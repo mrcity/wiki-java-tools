@@ -3,5 +3,8 @@
 ## YaCBot
 Clean up Wikimedia Commons pages
 
+## Usage
+[Usage]
+
 ## License
 [GPLv3+](COPYING.GPL)

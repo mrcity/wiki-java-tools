@@ -4,7 +4,7 @@
 [Tool-description]
 
 ## Usage
-[Usage]
+[Can be compiled into a ```.jar``` file and executed via ```java -jar toolname.jar```]
 
 ## License
 [GPLv3+](COPYING.GPL)

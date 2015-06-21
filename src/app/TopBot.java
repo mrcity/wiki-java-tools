@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -101,7 +102,7 @@ class Category extends WikiCategory {
 class CategoryTree extends Category {
 	private int recursiveCountFileMembers;
 	private boolean recursiveFileMembersUpdated;
-	private LinkedList<Category> reportCategories;
+	private HashSet<Category> reportCategories;
 	/**
 	 * Create report when this many recursive members (or more)
 	 */
@@ -173,12 +174,12 @@ class CategoryTree extends Category {
 	/**
 	 * Create the groups of all categories which will create a report; Those
 	 * categories may have category children which should go into the same
-	 * report; This method also adds this category in all cases; Duplicates are
-	 * removed
+	 * report; This method also adds this category in all cases; Duplicates can
+	 * not exist because a HashSet is used
 	 * 
-	 * @return the category groups as a LinkedList holding the root nodes
+	 * @return the category groups as a HashSet holding the root nodes
 	 */
-	public LinkedList<Category> getReportCategories() {
+	public HashSet<Category> getReportCategories() {
 		if (reportCategories == null) {
 			reportCategories = determineReportCategories(true)[0];
 
@@ -200,23 +201,23 @@ class CategoryTree extends Category {
 	 *         which produces the reports and the second entry being the
 	 *         remaining
 	 */
-	private LinkedList<Category>[] determineReportCategories(boolean forceReport) {
+	private HashSet<Category>[] determineReportCategories(boolean forceReport) {
 		if (getChildren() == null || getChildren().length == 0) {
-			LinkedList<Category> leafNode = new LinkedList<Category>();
+			HashSet<Category> leafNode = new HashSet<Category>();
 			leafNode.add(this);
 
 			if (this.createsReport())
-				return (LinkedList<Category>[]) new LinkedList<?>[] { leafNode,
-						new LinkedList<Category>() };
+				return (HashSet<Category>[]) new HashSet<?>[] { leafNode,
+						new HashSet<Category>() };
 			else
-				return (LinkedList<Category>[]) new LinkedList<?>[] {
-						new LinkedList<Category>(), leafNode };
+				return (HashSet<Category>[]) new HashSet<?>[] {
+						new HashSet<Category>(), leafNode };
 		}
 
-		LinkedList<Category> kidNodesDoReport = new LinkedList<Category>();
-		LinkedList<Category> kidNodesNoReport = new LinkedList<Category>();
+		HashSet<Category> kidNodesDoReport = new HashSet<Category>();
+		HashSet<Category> kidNodesNoReport = new HashSet<Category>();
 		for (CategoryTree kid : getChildren()) {
-			LinkedList<Category>[] kidResult = kid
+			HashSet<Category>[] kidResult = kid
 					.determineReportCategories(false);
 			// Just copy all previously determined reports
 			kidNodesDoReport.addAll(kidResult[0]);
@@ -225,27 +226,19 @@ class CategoryTree extends Category {
 		}
 
 		if (this.createsReport() || forceReport) {
-			if (!kidNodesDoReport.contains(this)) {
-				// create new category with all kids in one array
-				Category pruned = new Category(this.getName(),
-						kidNodesNoReport.toArray(new Category[] {}),
-						this.getFileMembers());
-				kidNodesDoReport.add(pruned);
-			} else {
-				System.out.println("Warning: Duplicate " + this.getName());
-				// TODO logger
-			}
+			// create new category with all kids in one array
+			Category pruned = new Category(this.getName(),
+					kidNodesNoReport.toArray(new Category[] {}),
+					this.getFileMembers());
+			kidNodesDoReport.add(pruned);
+
 			// start from scratch with grouping
-			kidNodesNoReport = new LinkedList<Category>();
+			kidNodesNoReport = new HashSet<Category>();
 		} else {
-			if (!kidNodesNoReport.contains(this))
-				kidNodesNoReport.add(this);
-			else
-				// TODO logger
-				System.out.println("Warning: Duplicate " + this.getName());
+			kidNodesNoReport.add(this);
 		}
 
-		return (LinkedList<Category>[]) new LinkedList<?>[] { kidNodesDoReport,
+		return (HashSet<Category>[]) new HashSet<?>[] { kidNodesDoReport,
 				kidNodesNoReport };
 	}
 }
@@ -318,9 +311,10 @@ class TopBotThread extends Thread {
 			}, App.MAX_FAILS, App.EXCEPTION_SLEEP_TIME);
 
 			logger.add(this.getName() + " shut down successfully.");
-		} catch (LoginException | IOException e) {
+		} catch (Exception e) { // TODO was: LoginException | IOException
 			logger.add(this.getName() + " shut down after " + App.MAX_FAILS
-					+ " exceptions. (" + categoryName + ")");
+					+ " exceptions. (" + categoryName + "; "
+					+ e.getClass().getName() + ")");
 		}
 	}
 
@@ -436,7 +430,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.06.18";
+	public static final String VERSION = "v15.06.19";
 
 	public static void main(String[] args) {
 
@@ -454,15 +448,16 @@ public class TopBot {
 
 			System.out.println("Fetching categories ...");
 			CategoryTree root = generateCategoryTree(ROOT_CATEGORY, commons);
-			LinkedList<Category> reportCats = root.getReportCategories();
+			Category[] reportCats = root.getReportCategories().toArray(
+					new Category[0]);
 
 			System.out.println("Creating threads ...");
 
 			// Create threads and logger
 			ConcurrentLinkedQueue<String> loggerQueue = new ConcurrentLinkedQueue<String>();
-			TopBotThread[] threads = new TopBotThread[reportCats.size()];
+			TopBotThread[] threads = new TopBotThread[reportCats.length];
 			for (int j = 0; j < threads.length; j++) {
-				threads[j] = new TopBotThread(commons, reportCats.get(j),
+				threads[j] = new TopBotThread(commons, reportCats[j],
 						loggerQueue);
 			}
 			Thread.sleep(1000);

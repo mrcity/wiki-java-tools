@@ -26,9 +26,11 @@ public class GIFburner extends App {
 	static int replaceCounter = 0;
 	static int replaceCounterMax = 10;
 	static String replaceCOMDEL = "";
+	static String zopfliPNGexe;
+	static String optiPNGexe;
 	final static String COMMONS_DELINKER_PAGE = "User:CommonsDelinker/commands";
 	final static int WAIT_AFTER_COMDEL_REQUEST = 15; // in minutes
-	final static String VERSION = "v15.06.01";
+	final static String VERSION = "v15.06.02";
 
 	static String linkList = "";
 	static Queue<String> deleteQueue = new LinkedList<>();
@@ -38,7 +40,7 @@ public class GIFburner extends App {
 		char[] password = passwordDialog(args);
 
 		System.out
-				.println("Is https://commons.wikimedia.org/w/index.php?title=Category:DuplicatePNG empyt?");
+				.println("Is https://commons.wikimedia.org/w/index.php?title=Category:DuplicatePNG empty?");
 		System.in.read();
 
 		commons = new Wiki("commons.wikimedia.org");
@@ -53,16 +55,30 @@ public class GIFburner extends App {
 			commons.setLogLevel(Level.WARNING);
 
 			BufferedReader br = new BufferedReader(new InputStreamReader(
-					new DataInputStream(new FileInputStream(args[1]
-							+ "/FileList"))));
+					new DataInputStream(new FileInputStream(args[1]))));
+
+			zopfliPNGexe = args[2];
+			optiPNGexe = args[3];
+			Process zopfliProcess = new ProcessBuilder(zopfliPNGexe).start();
+			if (0 != zopfliProcess.waitFor()) {
+				System.out.println(zopfliPNGexe
+						+ " not a valid zopflipng executable. Shutdown");
+				System.exit(-1);
+			}
+			Process optiProcess = new ProcessBuilder(optiPNGexe).start();
+			if (0 != optiProcess.waitFor()) {
+				System.out.println(optiPNGexe
+						+ " not a valid optipng executable. Shutdown");
+				System.exit(-1);
+			}
 
 			gifTagger(br);
 
 		} catch (Exception e) {
 			e.printStackTrace();
 			writeConclusion();
-			System.out.println("\n"
-					+ "Emergency Shutdown: Unhandled exception!" + "\n");
+			System.out.println("\n" + "Emergency Shutdown: Unhandled "
+					+ e.getClass().getName() + "!" + "\n");
 		}
 
 	}
@@ -79,10 +95,12 @@ public class GIFburner extends App {
 
 		System.out.println(VERSION);
 
-		String[] expectedArgs = { "username", "fileList" };
+		String[] expectedArgs = { "username", "fileList", "zopfli", "optipng" };
 		String[] expectedArgsDescription = {
 				"username is your username on the wiki.",
-				"fileList is the file list with all file names (one per line, without \"File:\"-prefix)." };
+				"fileList is the file list with all file names (one per line, without \"File:\"-prefix).",
+				"zopfli is the executable to compress png files",
+				"optipng is the executable to compress gif files to png" };
 		if (args.length != expectedArgs.length) {
 			System.out.print("Usage: java -jar filename.jar");
 			for (String i : expectedArgs)
@@ -104,9 +122,10 @@ public class GIFburner extends App {
 	 * @throws LoginException
 	 * @throws IOException
 	 *             if a network error occurs
+	 * @throws InterruptedException
 	 */
 	private static void gifTagger(BufferedReader br) throws LoginException,
-			IOException {
+			IOException, InterruptedException {
 
 		final File PNGtemp = File.createTempFile("gif2png", ".png", null);
 		final File GIFtemp = File.createTempFile("gif", ".gif", null);
@@ -219,12 +238,61 @@ public class GIFburner extends App {
 						+ "! {{int:filehist-datetime}} !! {{int:filehist-dimensions}} !! {{int:filehist-user}} !! {{int:filehist-comment}}\n"
 						+ historyLog + "|}";
 
+				// Compress PNG
+
+				final File zopfliPngFile = File.createTempFile("pngZopfli",
+						".png", null);
+				final File optiPngFile = File.createTempFile("pngOpti", ".png",
+						null);
+				zopfliPngFile.deleteOnExit();
+				optiPngFile.deleteOnExit();
+
+				Process zopfliPNGProcess = new ProcessBuilder(zopfliPNGexe,
+						"--lossy_transparent", PNGtemp.getPath(),
+						zopfliPngFile.getPath()).start();
+				Process optiPNGProcess = new ProcessBuilder(optiPNGexe,
+						GIFtemp.getPath(), "-o5", "-clobber",// "-preserve",//"-fix",
+						"-out", optiPngFile.getPath()).start();
+
+				if (0 != zopfliPNGProcess.waitFor()) {
+					throw new RuntimeException("zopfliPngExitValue");
+					// TODO continue...
+					// System.out.println("Skip: File:" + strLine
+					// + " (zopfliPngExitValue)");
+					// continue;
+				}
+
+				if (0 != optiPNGProcess.waitFor()) {
+					throw new RuntimeException("optiPngExitValue");
+					// System.out.println("Skip: File:" + strLine
+					// + " (optiPngExitValue)");
+					// continue;
+				}
+
+				BufferedImage reference = ImageIO.read(optiPngFile);
+
+				if (!(bufferedImageEquals(reference,
+						ImageIO.read(zopfliPngFile)) && bufferedImageEquals(
+						reference, GIFimage))) {
+					throw new RuntimeException("ImagesUnequal");
+					// System.out.println("Skip: File:" + strLine
+					// + " (ImagesUnequal)");
+					// continue;
+				}
+
+				System.out.println(" Debug: zopfliPngFile.length = "
+						+ zopfliPngFile.length() + "; optiPngFile.length = "
+						+ optiPngFile.length());
+
+				final File smaller = zopfliPngFile.length() < optiPngFile
+						.length() ? zopfliPngFile : optiPngFile;
+
 				attemptFetch(new WikiAPI() {
 
 					@Override
 					public Object fetch() throws IOException, LoginException {
 						commons.upload(
-								PNGtemp,
+								smaller,
 								filename,
 								pageText,
 								"Bot: Converting file to [[c:COM:FT#GIFvsPNG|superior]] PNG file. (Source: [[c:"
@@ -235,6 +303,9 @@ public class GIFburner extends App {
 						return null;
 					}
 				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+
+				zopfliPngFile.delete();
+				optiPngFile.delete();
 
 				linkList += "*[[:" + source.getName()
 						+ "#6cca01a2b5ea26e7871b]]\n";
@@ -280,6 +351,38 @@ public class GIFburner extends App {
 		System.out.println("\n" + "===================================="
 				+ "\n\n" + "  Exiting. (All successfully done)" + "\n\n"
 				+ "====================================");
+	}
+
+	/**
+	 * Check if the two images are equal
+	 * 
+	 * @param b1
+	 *            the first image
+	 * @param b2
+	 *            the second image
+	 * @return if the images are equal
+	 */
+	static boolean bufferedImageEquals(BufferedImage b1, BufferedImage b2) {
+		if (b1 == b2)
+			return true; // true if both are null
+
+		if (b1 == null || b2 == null)
+			return false;
+
+		if (b1.getWidth() != b2.getWidth())
+			return false;
+
+		if (b1.getHeight() != b2.getHeight())
+			return false;
+
+		for (int i = 0; i < b1.getWidth(); i++) {
+			for (int j = 0; j < b1.getHeight(); j++) {
+				if (b1.getRGB(i, j) != b2.getRGB(i, j)) {
+					return false;
+				}
+			}
+		}
+		return true;
 	}
 
 	/**
@@ -339,7 +442,7 @@ public class GIFburner extends App {
 		System.out.println("Request replacements of:" + "\n" + replaceCOMDEL
 				+ "\n");
 		System.out.println("Process those links:" + "\n" + linkList
-				+ "\n\n(At least the last " + replaceCounter + " files)");
+				+ "\n\n(The last " + replaceCounter + " files)");
 	}
 
 	/**
@@ -360,13 +463,20 @@ public class GIFburner extends App {
 			replaceCounter++;
 		}
 		if (replaceCounter > 0 && replaceCounter >= replaceCounterMax) {
+			final String pageText = (String) attemptFetch(new WikiAPI() {
+
+				@Override
+				public Object fetch() throws IOException, LoginException {
+					return commons.getPageText(COMMONS_DELINKER_PAGE);
+				}
+			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 			attemptFetch(new WikiAPI() {
 
 				@Override
 				public Object fetch() throws IOException, LoginException {
-					commons.edit(COMMONS_DELINKER_PAGE, replaceCOMDEL,
-							"Requesting to replace " + replaceCounter
-									+ " GIFs by exact PNG duplicates.", -1);
+					commons.edit(COMMONS_DELINKER_PAGE, pageText
+							+ replaceCOMDEL, "Requesting to replace "
+							+ replaceCounter + " GIFs by exact PNG duplicates.");
 					return null;
 				}
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);

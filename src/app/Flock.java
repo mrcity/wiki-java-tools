@@ -87,7 +87,7 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.06.14";
+	static final String VERSION = "v15.06.15";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
@@ -178,7 +178,8 @@ public class Flock extends App {
 			if (text.length() == 0) // means the file was deleted
 				continue;
 			if (text.length() > MAX_TEXT_LENGTH) {
-				checkNeeded = checkNeeded + "*[[:" + members[i] + "]] (skipped)\n";
+				checkNeeded = checkNeeded + "*[[:" + members[i]
+						+ "]] (skipped)\n";
 				skipped++;
 				continue;
 			}
@@ -244,12 +245,19 @@ public class Flock extends App {
 								+ " of the files and it is up to you to have a look at them.\n"
 								+ checkNeeded + "\n--~~~~");
 
+		final String pageText = (String) attemptFetch(new WikiAPI() {
+
+			@Override
+			public Object fetch() throws IOException, LoginException {
+				return wiki.getPageText(talkPageTitle);
+			}
+		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		attemptFetch(new WikiAPI() {
 
 			@Override
 			public Object fetch() throws IOException, LoginException {
-				wiki.edit(talkPageTitle, reportText, "Report - " + BOT_NAME
-						+ " " + VERSION, -1);
+				wiki.edit(talkPageTitle, pageText + reportText, "Report - "
+						+ BOT_NAME + " " + VERSION);
 				return null;
 			}
 		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);

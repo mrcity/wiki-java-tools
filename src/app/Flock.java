@@ -87,12 +87,13 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.06.15";
+	static final String VERSION = "v15.06.16";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
 	final static int DAYS_BEGIN = 15;
 	final static int DAYS_END = 6;
+	final static String DELETED_TEXT = "";
 
 	static final String REGEX_FLAGS = "(?si)";
 
@@ -172,10 +173,15 @@ public class Flock extends App {
 
 				@Override
 				public Object fetch() throws IOException, LoginException {
-					return getText(members[i], wiki);
+					if (wiki.exists(new String[] { members[i] })[0]) {
+						return wiki.getPageText(members[i]);
+					} else {
+						deleted++;
+						return DELETED_TEXT;
+					}
 				}
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-			if (text.length() == 0) // means the file was deleted
+			if (text == DELETED_TEXT)
 				continue;
 			if (text.length() > MAX_TEXT_LENGTH) {
 				checkNeeded = checkNeeded + "*[[:" + members[i]
@@ -277,33 +283,6 @@ public class Flock extends App {
 	private static String percent(int numerator, int denominator) {
 		int per100k = (int) ((100000.0 * numerator) / denominator);
 		return per100k / 1000.0 + " %";
-	}
-
-	/**
-	 * get the text of a page given the title. Return an empty string if page
-	 * not found.
-	 * 
-	 * @param title
-	 * @param wiki
-	 * @return the text
-	 * @throws IOException
-	 *             if a network issue occurs
-	 * @throws LoginException
-	 */
-	private static String getText(final String title, final Wiki wiki)
-			throws LoginException, IOException {
-		try {
-			return (String) attemptFetch(new WikiAPI() {
-
-				@Override
-				public Object fetch() throws IOException, LoginException {
-					return wiki.getPageText(title);
-				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-		} catch (FileNotFoundException e) {
-			deleted++;
-			return "";
-		}
 	}
 
 	/**

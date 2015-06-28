@@ -121,12 +121,12 @@ public class Commons {
 					"$1" },
 			{
 					CASE_INSENSITIVE
-							+ "(\\|\\s*source\\s*\\=\\s*[^*]+?)\\n?\\*\\s*uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]](\\||\\}\\}|\\r|\\n)",
-					"$1$2" },
-			{
-					CASE_INSENSITIVE
 							+ "(\\{\\{\\s*information\\s*)\\|(\\s*\\||\\}\\})",
 					"$1$2" } };
+	public static final String[][] UPLOADED_BY_REGEX = { {
+			CASE_INSENSITIVE
+					+ "(\\|\\s*source\\s*\\=\\s*[^*]+?)\\n?\\*\\s*uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]](\\||\\}\\}|\\r|\\n)",
+			"$1$2" } };
 	public static final String[][] DATE_REGEX = {
 			{
 					CASE_INSENSITIVE

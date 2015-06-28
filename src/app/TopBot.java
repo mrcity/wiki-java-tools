@@ -2,10 +2,10 @@ package app;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -182,24 +182,21 @@ class CategoryTree extends Category {
 	public HashSet<Category> getReportCategories() {
 		if (reportCategories == null) {
 			reportCategories = determineReportCategories(true)[0];
-
-			// TODO remove duplicates within each reportCategory
-
 		}
 		return reportCategories;
 	}
 
 	/**
 	 * Recursively determine which categories should be grouped into reports and
-	 * create a LinkedList with all categories which will produce a report;
-	 * Create another LinkedList of the remaining
+	 * create a HashSet with all categories which will produce a report; Create
+	 * another HashSet of the remaining; Duplicates do not exist in either
+	 * because a HashSet is used
 	 * 
 	 * @param forceReport
 	 *            if a report should be created in any case for this category
 	 * 
-	 * @return the LinkedList array with the first entry being the LinkedList
-	 *         which produces the reports and the second entry being the
-	 *         remaining
+	 * @return the HashSet array with the first entry being the HashSet which
+	 *         produces the reports and the second entry being the remaining
 	 */
 	private HashSet<Category>[] determineReportCategories(boolean forceReport) {
 		if (getChildren() == null || getChildren().length == 0) {
@@ -226,9 +223,10 @@ class CategoryTree extends Category {
 		}
 
 		if (this.createsReport() || forceReport) {
+			Category[] sorted = kidNodesNoReport.toArray(new Category[] {});
+			Arrays.sort(sorted);
 			// create new category with all kids in one array
-			Category pruned = new Category(this.getName(),
-					kidNodesNoReport.toArray(new Category[] {}),
+			Category pruned = new Category(this.getName(), sorted,
 					this.getFileMembers());
 			kidNodesDoReport.add(pruned);
 
@@ -311,7 +309,7 @@ class TopBotThread extends Thread {
 			}, App.MAX_FAILS, App.EXCEPTION_SLEEP_TIME);
 
 			logger.add(this.getName() + " shut down successfully.");
-		} catch (Exception e) { // TODO was: LoginException | IOException
+		} catch (LoginException | IOException e) {
 			logger.add(this.getName() + " shut down after " + App.MAX_FAILS
 					+ " exceptions. (" + categoryName + "; "
 					+ e.getClass().getName() + ")");
@@ -337,7 +335,7 @@ class TopBotThread extends Thread {
 			cArray[i][0] = members.get(i);
 		}
 
-		java.util.Arrays.sort(cArray, new java.util.Comparator<Comparable[]>() {
+		Arrays.sort(cArray, new Comparator<Comparable[]>() {
 			public int compare(Comparable[] a, Comparable[] b) {
 				return b[1].compareTo(a[1]);
 			}
@@ -351,9 +349,7 @@ class TopBotThread extends Thread {
 				+ timestamp.format(twoWeeksFromNow)
 				+ "|{{speedy|Outdated report, which was replaced by "
 				+ "a fresh one through [[user:{{subst:REVISIONUSER}}]].}}|}}"
-				+ "\nLast update: "
-				+ DateFormat.getDateInstance(DateFormat.FULL).format(
-						now.getTime()) + "." + "\n"
+				+ "\nLast update: {{subst:#time:d F Y}}." + "\n"
 				+ "\nThis report includes the following categories while "
 				+ "counting only the usage of each file "
 				+ "in the main namespace.\n\n" + getInfo(false)
@@ -430,7 +426,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.06.19";
+	public static final String VERSION = "v15.06.20";
 
 	public static void main(String[] args) {
 
@@ -465,9 +461,10 @@ public class TopBot {
 				t.start();
 			}
 
-			// Finalize
+			// Join all threads
 			for (TopBotThread t : threads)
 				t.join();
+			// Write exit status of all threads
 			for (int i = 0; i < threads.length; i++)
 				System.out.println(loggerQueue.remove());
 

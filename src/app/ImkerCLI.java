@@ -3,6 +3,8 @@ package app;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 
 import javax.security.auth.login.LoginException;
@@ -14,9 +16,22 @@ public class ImkerCLI extends ImkerBase {
 	private static final String PAGE_PARAM = "-page=";
 	private static final String FILE_PARAM = "-file=";
 	private static final String OUT_PARAM = "-outfolder=";
+	private static final StatusHandler stdOutPrint = new StatusHandler() {
+
+		@Override
+		public void handle(int i, String fileName) {
+			System.out.println("(" + (i + 1) + "/" + fileNames.length + "): "
+					+ fileName);
+		}
+
+		@Override
+		public void handleConclusion(String status2) {
+			System.out.println(status2);
+		}
+	};
 
 	public static void main(String[] args) throws FileNotFoundException,
-			IOException, LoginException {
+			IOException, LoginException, NoSuchAlgorithmException {
 
 		System.out.println(PROGRAM_NAME);
 		System.out.println(MSGS.getString("Description_Program"));
@@ -32,7 +47,45 @@ public class ImkerCLI extends ImkerBase {
 		fileNames = getFilenames(args[0]);
 
 		download();
-		// TODO verifyChecksum();
+		verifyChecksum();
+	}
+
+	/**
+	 * Verify the checksum of all files and request permission from the user to
+	 * delete corrupt files
+	 * 
+	 * @throws NoSuchAlgorithmException
+	 * @throws IOException
+	 */
+	private static void verifyChecksum() throws NoSuchAlgorithmException,
+			IOException {
+		System.out.println(MSGS.getString("Status_Checksum"));
+		int errors = checksumLoop(stdOutPrint);
+		System.out.println(String.format(
+				MSGS.getString("Status_Checksum_Complete"), errors));
+		if (errors == 0) {
+			return;
+		}
+
+		for (int i = 0; i < fileStatuses.length; i++) {
+			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR) {
+				System.out.println(" * " + fileNames[i]);
+			}
+		}
+		System.out.println(String.format(MSGS.getString("Hint_Files_Corrupt"),
+				errors));
+
+		promptEnter();
+
+		for (int i = 0; i < fileStatuses.length; i++) {
+			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR)
+				Files.delete(new File(outputFolder.getPath() + File.separator
+						+ fileNames[i].substring(FILE_PREFIX.length()))
+						.toPath());
+		}
+
+		System.out.println(MSGS.getString("Status_Checksum_Deleted"));
+		System.out.println(MSGS.getString("Status_Restart_Needed"));
 	}
 
 	/**
@@ -50,25 +103,24 @@ public class ImkerCLI extends ImkerBase {
 				+ outputFolder.getPath()
 				+ "\n"
 				+ String.format(MSGS.getString("Prompt_Download"),
-						fileNames.length) + "\n"
-				+ MSGS.getString("Prompt_Enter"));
-		System.in.read();
+						fileNames.length));
+		promptEnter();
 
-		downloadLoop(new StatusHandler() {
-
-			@Override
-			public void handle(int i, String fileName) {
-				System.out.println("(" + (i + 1) + "/" + fileNames.length
-						+ "): " + fileName);
-			}
-
-			@Override
-			public void handleConclusion(String status2) {
-				System.out.println(status2);
-			}
-		});
+		downloadLoop(stdOutPrint);
 
 		System.out.println("\n" + MSGS.getString("Status_Download_Complete"));
+	}
+
+	/**
+	 * Prompt the user to hit enter and wait for them to hit enter
+	 * 
+	 * @throws IOException
+	 *             if an I/O error occurs
+	 * 
+	 */
+	private static void promptEnter() throws IOException {
+		System.out.println(MSGS.getString("Prompt_Enter"));
+		System.in.read();
 	}
 
 	/**

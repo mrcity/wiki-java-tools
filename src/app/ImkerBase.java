@@ -41,7 +41,7 @@ interface StatusHandler {
 }
 
 public class ImkerBase extends App {
-	protected static final String VERSION = "v15.06.16";
+	protected static final String VERSION = "v15.06.17";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String FILE_PREFIX = "File:";

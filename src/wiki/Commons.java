@@ -61,7 +61,7 @@ public class Commons {
 			{
 					CASE_INSENSITIVE
 							+ "(\\|\\s*source\\s*=\\s*)(((?:\\'\\'+)?)([\\\"\\']?)(?:selbst\\W*erstellte?s?|selbst\\W*gezeichnete?s?|self\\W*made|eigene?s?)\\W*?(?:arbeit|aufnahme|(?:ph|f)oto(?:gra(?:ph|f)ie)?)?\\.?\\4\\3) *(\\||\\}\\}|\\r|\\n)",
-					"$1{{own}} ({{original text|1=$2|nobold=1}})$5" },
+					"$1{{own}}$5" },
 			{
 					CASE_INSENSITIVE
 							+ "(\\|\\s*source\\s*=\\s*)(?:self[^a-z]*photographed|selbst[^a-z]*(?:aufgenommen|(?:f|ph)otogra(?:f|ph)iert?)|投稿者撮影|投稿者の撮影)\\s*?\\.? *(\\||\\}\\}|\\r|\\n)",
@@ -97,11 +97,11 @@ public class Commons {
 					"$1$2" },
 			{
 					CASE_INSENSITIVE
-							+ "(\\|\\s*permission\\s*=)\\s*((?:\\'\\')?)(?:-|下記を参照|see(?: licens(?:e|ing|e +section))?(?: below)?|yes|oui)\\s*?\\,?\\.?;?\\s*?\\2\\s*?(\\||\\}\\}|\\r|\\n)",
+							+ "(\\|\\s*permission\\s*=)\\s*((?:\\'\\')?)(?:-|—|下記を参照|see(?: licens(?:e|ing|e +section))?(?: below)?|yes|oui)\\s*?\\,?\\.?;?\\s*?\\2\\s*?(\\||\\}\\}|\\r|\\n)",
 					"$1$3" },
 			{
 					CASE_INSENSITIVE
-							+ "(\\|\\s*other[_ ]versions\\s*=)\\s*(?:<i>)?(?:-|no|none?(?: known)?|nein|yes|keine|\\-+)\\.?(?:</i>)? *(\\||\\}\\}|\\r|\\n)",
+							+ "(\\|\\s*other[_ ]versions\\s*=)\\s*(?:<i>)?(?:-|—|no|none?(?: known)?|nein|yes|keine|\\-+)\\.?(?:</i>)? *(\\||\\}\\}|\\r|\\n)",
 					"$1$2" },
 			{
 					CASE_INSENSITIVE
@@ -119,6 +119,10 @@ public class Commons {
 					CASE_INSENSITIVE
 							+ "\\{\\{\\s*(?:aa|ab|ace|af|ak|als|am|an|ang|ar|arc|arz|as|ast|av|ay|az|ba|bar|bcl|be|bg|bh|bi|bjn|bm|bn|bo|bpy|br|bs|bug|bxr|ca|cbk-zam|cdo|ce|ceb|ch|cho|chr|chy|ckb|co|cr|crh|cs|csb|cu|cv|cy|da|de|diq|dsb|dv|dz|ee|el|eml|en|eo|es|et|eu|ext|fa|ff|fi|fiu-vro|fj|fo|fr|frp|frr|fur|fy|ga|gag|gan|gd|gl|glk|gn|got|gu|gv|ha|hak|haw|he|hi|hif|ho|hr|hsb|ht|hu|hy|hz|ia|id|ie|ig|ii|map-bms|ik|ilo|io|is|it|iu|ja|jbo|jv|ka|kaa|kab|kbd|kg|ki|kj|kk|kl|km|kn|ko|kr|krc|ks|ksh|ku|kv|kw|ky|la|lad|lb|lbe|lez|lg|li|lij|roa-rup|lmo|ln|lo|lt|ltg|lv|mdf|mg|mh|mhr|mi|mk|ml|mn|mo|mr|mrj|ms|mt|mus|mwl|my|myv|mzn|na|nah|nap|nds|nds-nl|ne|new|ng|nl|nn|no|nov|nrm|nso|nv|ny|oc|om|or|os|pa|pag|pam|pap|pcd|pdc|pfl|pi|pih|pl|pms|pnb|pnt|ps|pt|qu|rm|rmy|rn|ro|roa-tara|ru|rue|rw|sa|sah|sc|scn|sco|sd|se|sg|sh|si|sk|sl|sm|sn|so|sq|sr|srn|ss|st|stq|su|sv|sw|szl|ta|te|tet|tg|th|ti|tk|tn|to|zh-hans|tpi|tr|ts|tt|tum|tw|ty|tyv|udm|ug|uk|ur|uz|ve|vec|vep|vi|vls|vo|wa|war|wo|wuu|xal|xh|xmf|yi|yo|za|zea|zh|zh-hant|zh-hk|zh-min-nan|zh-sg|zu)\\s*(?:|\\||\\|\\s*1=)?\\s*\\}\\} *(\\||\\}\\}|\\r|\\n)",
 					"$1" },
+			{
+					CASE_INSENSITIVE
+							+ "(\\|\\s*source\\s*\\=\\s*[^*]+?)\\n?\\*\\s*uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]](\\||\\}\\}|\\r|\\n)",
+					"$1$2" },
 			{
 					CASE_INSENSITIVE
 							+ "(\\{\\{\\s*information\\s*)\\|(\\s*\\||\\}\\})",

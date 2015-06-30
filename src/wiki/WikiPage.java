@@ -172,6 +172,12 @@ public class WikiPage {
 			}
 			text[i] = textPart;
 		}
+		if (!getPlainText().matches(
+				"(?ius).*?\\{\\{\\s*int:filedesc\\s*\\}\\}.*?")) {
+			this.setPlainText("== {{int:filedesc}} ==\n" + getPlainText());
+			// TODO minor changes can not be logged in the edit summary as of now
+			// appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
+		}
 	}
 
 	/**

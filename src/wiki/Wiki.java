@@ -22,6 +22,7 @@ package wiki;
 
 import java.io.*;
 import java.net.*;
+import java.nio.file.Files;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.logging.*;
@@ -3425,35 +3426,14 @@ public class Wiki implements Serializable
     @Deprecated
     public byte[] getImage(String title, int width, int height) throws IOException
     {
-        // this is a two step process - first we fetch the image url
-        title = title.replaceFirst("^(File|Image|" + namespaceIdentifier(FILE_NAMESPACE) + "):", "");
-        StringBuilder url = new StringBuilder(query);
-        url.append("prop=imageinfo&iiprop=url&titles=");
-        url.append(URLEncoder.encode(normalize("File:" + title), "UTF-8"));
-        url.append("&iiurlwidth=");
-        url.append(width);
-        url.append("&iiurlheight=");
-        url.append(height);
-        String line = fetch(url.toString(), "getImage");
-        if (!line.contains("<imageinfo>"))
-            return null;
-        String url2 = parseAttribute(line, "url", 0);
+        File image = File.createTempFile("wiki-java_getImage", null);
+        image.deleteOnExit();
 
-        // then we use ImageIO to read from it
-        logurl(url2, "getImage");
-        URLConnection connection = makeConnection(url2);
-        setCookies(connection);
-        connection.connect();
-        // there should be a better way to do this
-        try(
-        BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-        ByteArrayOutputStream out = new ByteArrayOutputStream()){
-        int c;
-        while ((c = in.read()) != -1)
-            out.write(c);
-        log(Level.INFO, "getImage", "Successfully retrieved image \"" + title + "\"");
-        return out.toByteArray();
-        }
+        boolean downloaded = getImage(title, width, height, image);
+        if (!downloaded)
+            return null;
+
+        return Files.readAllBytes(image.toPath());
     }
 
     /**
@@ -3486,22 +3466,27 @@ public class Wiki implements Serializable
             return false;
         String url2 = parseAttribute(line, "url", 0);
 
-        // then we use ImageIO to read from it
+        // then we read the image
         logurl(url2, "getImage");
         URLConnection connection = makeConnection(url2);
         setCookies(connection);
         connection.connect();
+
         // there should be a better way to do this
-		try (BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-			 BufferedOutputStream outStream = new BufferedOutputStream(new FileOutputStream(file)))
-		{
-			int c;
-			while ((c = in.read()) != -1)
-				outStream.write(c);
-			outStream.flush();
-		}
-		log(Level.INFO, "getImage", "Successfully retrieved image \"" + title + "\"");
-		return true;
+        InputStream input = connection.getInputStream();
+        if ("gzip".equals(connection.getContentEncoding()))
+            input = new GZIPInputStream(input);
+
+        try (BufferedInputStream in = new BufferedInputStream(input);
+            BufferedOutputStream outStream = new BufferedOutputStream(new FileOutputStream(file)))
+       {
+            int c;
+            while ((c = in.read()) != -1)
+                    outStream.write(c);
+            outStream.flush();
+       }
+       log(Level.INFO, "getImage", "Successfully retrieved image \"" + title + "\"");
+       return true;
     }
 
     /**
@@ -3512,6 +3497,7 @@ public class Wiki implements Serializable
      *  * size (file size, Integer)
      *  * width (Integer)
      *  * height (Integer)
+     *  * sha1 (String)
      *  * mime (MIME type, String)
      *  * plus EXIF metadata (Strings)
      *
@@ -3526,17 +3512,18 @@ public class Wiki implements Serializable
         // TODO: support prop=videoinfo
         // fetch
         file = file.replaceFirst("^(File|Image|" + namespaceIdentifier(FILE_NAMESPACE) + "):", "");
-        String url = query + "prop=imageinfo&iiprop=size%7Cmime%7Cmetadata&titles="
+        String url = query + "prop=imageinfo&iiprop=size%7Csha1%7Cmime%7Cmetadata&titles="
                 + URLEncoder.encode(normalize("File:" + file), "UTF-8");
         String line = fetch(url, "getFileMetadata");
         if (line.contains("missing=\"\""))
             return null;
         Map<String, Object> metadata = new HashMap<>(30);
 
-        // size, width, height, mime type
+        // size, width, height, sha, mime type
         metadata.put("size", new Integer(parseAttribute(line, "size", 0)));
         metadata.put("width", new Integer(parseAttribute(line, "width", 0)));
         metadata.put("height", new Integer(parseAttribute(line, "height", 0)));
+        metadata.put("sha1", parseAttribute(line, "sha1", 0));
         metadata.put("mime", parseAttribute(line, "mime", 0));
 
         // exif
@@ -3620,22 +3607,23 @@ public class Wiki implements Serializable
         history.set(size - 1, last);
         return history.toArray(new LogEntry[size]);
     }
-
+    
     /**
-     *  Gets an old image revision and returns the image data in a <tt>byte[]</tt>.
-     *  You will have to do the thumbnailing yourself.n
+     *  Gets an old image revision and writes the image data in a file.
+     *  Warning: This does overwrite any file content!
+     *  You will have to do the thumbnailing yourself.
      *  @param entry the upload log entry that corresponds to the image being
      *  uploaded
-     *  @return the image data that was uploaded, as long as it exists in the
-     *  local repository (i.e. not on Commons or deleted)
+     *  @param file the file to write the image to
+     *  @return true if the file exists in the local repository (i.e. not on
+     *  Commons or deleted)
+     *  @throws FileNotFoundException if the file is a directory, cannot be created or opened
      *  @throws IOException if a network error occurs
      *  @throws IllegalArgumentException if the entry is not in the upload log
-     *  @since 0.20
+     *  @since 0.30
      */
-    public byte[] getOldImage(LogEntry entry) throws IOException
+    public boolean getOldImage(LogEntry entry, File file) throws IOException
     {
-        // @revised 0.24 BufferedImage => byte[]
-
         // check for type
         if (!entry.getType().equals(UPLOAD_LOG))
             throw new IllegalArgumentException("You must provide an upload log entry!");
@@ -3657,23 +3645,57 @@ public class Wiki implements Serializable
                 URLConnection connection = makeConnection(url);
                 setCookies(connection);
                 connection.connect();
+                
                 // there should be a better way to do this
-                BufferedInputStream in = new BufferedInputStream(connection.getInputStream());
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
-                int c;
-                while ((c = in.read()) != -1)
-                    out.write(c);
+                InputStream input = connection.getInputStream();
+                if ("gzip".equals(connection.getContentEncoding()))
+                    input = new GZIPInputStream(input);
 
-                // scrape archive name for logging purposes
-                String archive = parseAttribute(line, "archivename", 0);
-                if (archive == null)
-                    archive = title;
-                log(Level.INFO, "getOldImage", "Successfully retrieved old image \"" + archive + "\"");
-                return out.toByteArray();
+                try (BufferedInputStream in = new BufferedInputStream(input);
+                	 BufferedOutputStream outStream = new BufferedOutputStream(new FileOutputStream(file)))
+                {
+                    int c;
+                    while ((c = in.read()) != -1)
+                        outStream.write(c);
+                    outStream.flush();
+
+                    // scrape archive name for logging purposes
+                    String archive = parseAttribute(line, "archivename", 0);
+                    if (archive == null)
+                        archive = title;
+                    log(Level.INFO, "getOldImage", "Successfully retrieved old image \"" + archive + "\"");
+                    return true;
+                }
             }
         }
-        return null;
+        return false;
     }
+
+    /**
+     *  Gets an old image revision and returns the image data in a <tt>byte[]</tt>.
+     *  You will have to do the thumbnailing yourself.n
+     *  @param entry the upload log entry that corresponds to the image being
+     *  uploaded
+     *  @return the image data that was uploaded, as long as it exists in the
+     *  local repository (i.e. not on Commons or deleted)
+     *  @deprecated expects a file as additional parameter
+     *  @throws IOException if a network error occurs
+     *  @throws IllegalArgumentException if the entry is not in the upload log
+     *  @since 0.20
+     */
+    @Deprecated
+    public byte[] getOldImage(LogEntry entry) throws IOException
+    {
+        // @revised 0.24 BufferedImage => byte[]
+        File image = File.createTempFile("wiki-java_getOldImage", null);
+        image.deleteOnExit();
+
+        boolean downloaded = getOldImage(entry, image);
+        if (!downloaded)
+            return null;
+
+        return Files.readAllBytes(image.toPath());
+     }
 
     /**
      *  Gets the uploads of a user.

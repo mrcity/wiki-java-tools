@@ -1,6 +1,6 @@
 package wiki;
 
-public class WikiCategory {
+public class WikiCategory implements Comparable<WikiCategory> {
 
 	private String name;
 	private String sortkey;
@@ -52,5 +52,17 @@ public class WikiCategory {
 	 */
 	public WikiCategory[] getChildren() {
 		return children;
+	}
+
+	/**
+	 * Compares two WikiCategory by comparing their names
+	 * 
+	 * @param otherCat
+	 *            the WikiCategory to compare
+	 * @return the result of the String comparison
+	 */
+	@Override
+	public int compareTo(WikiCategory otherCat) {
+		return this.getName().compareTo(otherCat.getName());
 	}
 }

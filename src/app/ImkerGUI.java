@@ -177,8 +177,6 @@ public class ImkerGUI extends ImkerBase {
 				+ String.format(GITHUB_ISSUE_TRACKER, title, ""));
 		ep.setEditable(false);
 		ep.setFocusable(true);
-		ep.setFont(new JLabel().getFont());
-		ep.setBackground(new JLabel().getBackground());
 
 		JOptionPane.showMessageDialog(FRAME, ep,
 				MSGS.getString("Status_Exception_Caught"),
@@ -476,13 +474,7 @@ public class ImkerGUI extends ImkerBase {
 		} else if (PAGE_BUTTON.isSelected()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Page")
 					+ " ...");
-			fileNames = (String[]) attemptFetch(new WikiAPI() {
-
-				@Override
-				public String[] fetch() throws IOException {
-					return wiki.getImagesOnPage(inputPage);
-				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			fileNames = getImagesOnPage(inputPage, true);
 		} else { // fileButton.isSelected()
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Parse_File")
 					+ " ...");

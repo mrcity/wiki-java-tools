@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Queue;
@@ -41,7 +42,7 @@ interface StatusHandler {
 }
 
 public class ImkerBase extends App {
-	protected static final String VERSION = "v15.06.17";
+	protected static final String VERSION = "v15.07.03";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String FILE_PREFIX = "File:";
@@ -171,6 +172,45 @@ public class ImkerBase extends App {
 			}
 		}
 		return errors;
+	}
+
+	/**
+	 * Gets the list of images used on a particular page. If there are
+	 * redirected images, both the source and target page are included. Capped
+	 * at max number of images, there's no reason why there should be more than
+	 * that.
+	 * 
+	 * @param title
+	 *            the name of the page
+	 * @param resolveRedirects
+	 *            do not include redirects
+	 * @return the list of images
+	 * @throws LoginException
+	 * @throws IOException
+	 *             if a network error occurs
+	 */
+	protected static String[] getImagesOnPage(final String title,
+			final boolean resolveRedirects) throws LoginException, IOException {
+		String[] list = (String[]) attemptFetch(new WikiAPI() {
+
+			@Override
+			public String[] fetch() throws IOException {
+				return wiki.getImagesOnPage(title);
+			}
+		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		if (!resolveRedirects)
+			return list;
+
+		String[] red = wiki.resolveRedirects(list);
+		// create HashSet to get rid of duplicates
+		HashSet<String> set = new HashSet<String>(list.length);
+		for (int i = 0; i < red.length; i++) {
+			if (red[i] == null)
+				set.add(list[i]);
+			else
+				set.add(red[i]);
+		}
+		return set.toArray(new String[] {});
 	}
 
 	/**

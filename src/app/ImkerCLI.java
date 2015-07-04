@@ -187,13 +187,7 @@ public class ImkerCLI extends ImkerBase {
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		} else if (pageIndex > 0) {
 			arg = inputArg.substring(pageIndex + PAGE_PARAM.length());
-			fnames = (String[]) attemptFetch(new WikiAPI() {
-
-				@Override
-				public String[] fetch() throws IOException {
-					return wiki.getImagesOnPage(arg);
-				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			fnames = getImagesOnPage(arg, true);
 		} else if (fileIndex > 0) {
 			arg = inputArg.substring(fileIndex + FILE_PARAM.length());
 			fnames = readFileNames(arg);

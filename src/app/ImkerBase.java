@@ -175,15 +175,15 @@ public class ImkerBase extends App {
 	}
 
 	/**
-	 * Gets the list of images used on a particular page. If there are
-	 * redirected images, both the source and target page are included. Capped
-	 * at max number of images, there's no reason why there should be more than
-	 * that.
+	 * Gets the list of images used on a particular page. If resolveRedirect is
+	 * false and there are redirects on the page, both the source and target
+	 * page get included in the list. If resolveRedirect is true only the target
+	 * pages are included and all duplicates are wiped.
 	 * 
 	 * @param title
 	 *            the name of the page
 	 * @param resolveRedirects
-	 *            do not include redirects
+	 *            resolve redirects
 	 * @return the list of images
 	 * @throws LoginException
 	 * @throws IOException

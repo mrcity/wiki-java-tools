@@ -1,13 +1,9 @@
 package app;
 
 import java.awt.image.BufferedImage;
-import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -30,7 +26,7 @@ public class GIFburner extends App {
 	static String optiPNGexe;
 	final static String COMMONS_DELINKER_PAGE = "User:CommonsDelinker/commands";
 	final static int WAIT_AFTER_COMDEL_REQUEST = 15; // in minutes
-	final static String VERSION = "v15.06.02";
+	final static String VERSION = "v15.07.04";
 
 	static String linkList = "";
 	static Queue<String> deleteQueue = new LinkedList<>();
@@ -54,11 +50,8 @@ public class GIFburner extends App {
 			commons.setMarkMinor(true);
 			commons.setLogLevel(Level.WARNING);
 
-			BufferedReader br = new BufferedReader(new InputStreamReader(
-					new DataInputStream(new FileInputStream(args[1]))));
-
-			zopfliPNGexe = args[2];
-			optiPNGexe = args[3];
+			zopfliPNGexe = args[1];
+			optiPNGexe = args[2];
 			Process zopfliProcess = new ProcessBuilder(zopfliPNGexe).start();
 			if (0 != zopfliProcess.waitFor()) {
 				System.out.println(zopfliPNGexe
@@ -72,7 +65,7 @@ public class GIFburner extends App {
 				System.exit(-1);
 			}
 
-			gifTagger(br);
+			gifTagger("Images which should be in PNG format");
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -95,10 +88,9 @@ public class GIFburner extends App {
 
 		System.out.println(VERSION);
 
-		String[] expectedArgs = { "username", "fileList", "zopfli", "optipng" };
+		String[] expectedArgs = { "username", "zopfli", "optipng" };
 		String[] expectedArgsDescription = {
 				"username is your username on the wiki.",
-				"fileList is the file list with all file names (one per line, without \"File:\"-prefix).",
 				"zopfli is the executable to compress png files",
 				"optipng is the executable to compress gif files to png" };
 		if (args.length != expectedArgs.length) {
@@ -117,14 +109,14 @@ public class GIFburner extends App {
 	/**
 	 * Run the main program
 	 * 
-	 * @param br
-	 *            the buffered reader to read the file list from
+	 * @param category
+	 *            the category to read the files from
 	 * @throws LoginException
 	 * @throws IOException
 	 *             if a network error occurs
 	 * @throws InterruptedException
 	 */
-	private static void gifTagger(BufferedReader br) throws LoginException,
+	private static void gifTagger(String category) throws LoginException,
 			IOException, InterruptedException {
 
 		final File PNGtemp = File.createTempFile("gif2png", ".png", null);
@@ -132,27 +124,13 @@ public class GIFburner extends App {
 		PNGtemp.deleteOnExit();
 		GIFtemp.deleteOnExit();
 
-		String strLine;
-		while ((strLine = br.readLine()) != null) {
-			if (strLine.length() == 0)
-				continue;
-			final WikiPage source;
-			try {
-				source = new WikiPage(commons, "File:" + strLine);
-			} catch (FileNotFoundException e) {
-				System.out.println("Skip: File:" + strLine + " (Not found)");
-				continue;
-			}
-			if ((boolean) attemptFetch(new WikiAPI() {
+		String[] files = commons.getCategoryMembers(category,
+				new int[] { Wiki.FILE_NAMESPACE });
+		for (String strLine : files) {
 
-				@Override
-				public Object fetch() throws IOException {
-					return commons.isRedirect(source.getName());
-				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME)) {
-				System.out.println("Skip: " + source.getName() + " (Redirect)");
-				continue;
-			}
+			final WikiPage source;
+			source = new WikiPage(commons, "File:" + strLine);
+
 			String metadata = (String) attemptFetch(new WikiAPI() {
 
 				@Override
@@ -279,10 +257,6 @@ public class GIFburner extends App {
 					// + " (ImagesUnequal)");
 					// continue;
 				}
-
-				System.out.println(" Debug: zopfliPngFile.length = "
-						+ zopfliPngFile.length() + "; optiPngFile.length = "
-						+ optiPngFile.length());
 
 				final File smaller = zopfliPngFile.length() < optiPngFile
 						.length() ? zopfliPngFile : optiPngFile;

@@ -198,7 +198,12 @@ public class WikiPage {
 			if (getEditSummary().length() > 0)
 				appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
 		}
-		this.setPlainText(getPlainText() + appendToPlainText);
+		String[] splitPlainText = getPlainText().split("(?i)\\[\\[category:", 2);
+		this.setPlainText(splitPlainText[0]
+				+ "\n"
+				+ appendToPlainText
+				+ (splitPlainText.length > 1 ? "[[Category:"
+						+ splitPlainText[1] : ""));
 	}
 
 	/**

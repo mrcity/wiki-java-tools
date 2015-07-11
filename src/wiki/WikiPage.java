@@ -103,6 +103,10 @@ public class WikiPage {
 		// Stuff that involves comments to be replaced comes here
 		this.setPlainText(regexCleaner(getPlainText(), Commons.COMMENT_REGEX,
 				false));
+
+		// append this after all replacements
+		String appendToPlainText = "";
+
 		// Stuff that must ignore comments follows
 		for (int i = 0; i < text.length; ++i) {
 			String cleanText;
@@ -136,6 +140,7 @@ public class WikiPage {
 								// Commons.UPLOADED_BY_REGEX already matched
 					appendToEditSummary("Removing redundant and possibly misleading information: \""
 							+ m.group() + "\". ");
+					appendToPlainText += "<!-- " + m.group() + " -->";
 					textPart = cleanText;
 				}
 				cleanText = regexCleaner(textPart, Commons.DATE_REGEX, false);
@@ -193,6 +198,7 @@ public class WikiPage {
 			if (getEditSummary().length() > 0)
 				appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
 		}
+		this.setPlainText(getPlainText() + appendToPlainText);
 	}
 
 	/**

@@ -97,7 +97,7 @@ public class Commons {
 					"$1$2" },
 			{
 					CASE_INSENSITIVE
-							+ "(\\|\\s*permission\\s*=)\\s*((?:\\'\\')?)(?:-|—|下記を参照|see(?: licens(?:e|ing|e +section))?(?: below)?|yes|oui)\\s*?\\,?\\.?;?\\s*?\\2\\s*?(\\||\\}\\}|\\r|\\n)",
+							+ "(\\|\\s*permission\\s*=)\\s*((?:\\'\\')?)(?:-|—|下記を参照|see(?: licens(?:e|ing|e +section))?(?: bell?ow)?|yes|oui)\\s*?\\,?\\.?;?\\s*?\\2\\s*?(\\||\\}\\}|\\r|\\n)",
 					"$1$3" },
 			{
 					CASE_INSENSITIVE

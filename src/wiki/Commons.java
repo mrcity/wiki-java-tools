@@ -101,6 +101,10 @@ public class Commons {
 					"$1$3" },
 			{
 					CASE_INSENSITIVE
+							+ "(\\|\\s*permission\\s*=)\\s*\\{\\{(?:en\\|)?\\s*?see\\sbell?ow\\s*?\\}\\}\\s*?(\\||\\}\\}|\\r|\\n)",
+					"$1$2" },
+			{
+					CASE_INSENSITIVE
 							+ "(\\|\\s*other[_ ]versions\\s*=)\\s*(?:<i>)?(?:-|—|no|none?(?: known)?|nein|yes|keine|\\-+)\\.?(?:</i>)? *(\\||\\}\\}|\\r|\\n)",
 					"$1$2" },
 			{

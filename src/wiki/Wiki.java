@@ -438,7 +438,7 @@ public class Wiki implements Serializable
     private String protocol = "https://";
     private Level loglevel = Level.ALL;
     private static final Logger logger = Logger.getLogger("wiki");
-    
+
     // Store time when the last throttled action was executed
     private long lastThrottleActionTime = 0;
 
@@ -1712,7 +1712,7 @@ public class Wiki implements Serializable
         // @revised 0.16 to use API edit. No more screenscraping - yay!
         // @revised 0.17 section editing
         // @revised 0.25 optional bot flagging
-    	throttle();
+        throttle();
 
         // protection and token
         Map info = getPageInfo(title);
@@ -4798,7 +4798,7 @@ public class Wiki implements Serializable
         log(Level.INFO, "getCategoryMembers", "Successfully retrieved contents of Category:" + name + " (" + size + " items)");
         return members.toArray(new String[size]);
     }
-    
+
     /**
      * Return the next batch of files ...
      *  
@@ -4808,25 +4808,25 @@ public class Wiki implements Serializable
      * request and the file to continue from
      * @throws IOException 
      */
-	public Object[] listAllFiles(String continueKey, int amount) throws IOException
-	{
+    public Object[] listAllFiles(String continueKey, int amount) throws IOException
+    {
         StringBuilder url = new StringBuilder(query);
-        url.append("list=allpages&apcontinue="+URLEncoder.encode(continueKey, "UTF-8")+"&apnamespace=6&apfilterredir=nonredirects&aplimit="+amount);
+        url.append("list=allpages&apcontinue=" + URLEncoder.encode(continueKey, "UTF-8") + "&apnamespace=6&apfilterredir=nonredirects&aplimit=" + amount);
         String line = fetch(url.toString(), "listAllFiles");
 
         ArrayList<String> members = new ArrayList<String>();
         // xml form: <p pageid="22097388" ns="6" title="File:~2009-07-09 סימטאות יפה העתיקה.jpg" />
         for (int x = line.indexOf("<p "); x > 0; x = line.indexOf("<p ", ++x))
-        	members.add( (parseAttribute(line, "title", x)));
+            members.add((parseAttribute(line, "title", x)));
         if (line.contains("<query-continue>"))
-        	continueKey =  (parseAttribute(line, "apcontinue", 0));
+            continueKey = (parseAttribute(line, "apcontinue", 0));
         else
-        	continueKey = "";
+            continueKey = "";
 
         int size = members.size();
         log(Level.INFO, "Successfully retrieved next files (" + size + " items)", "listAllFiles");
-        return new Object[] {continueKey , members.toArray(new String[size])};
-	}
+        return new Object[] { continueKey, members.toArray(new String[size]) };
+    }
 
     /**
      *  Searches the wiki for external links. Equivalent to [[Special:Linksearch]].

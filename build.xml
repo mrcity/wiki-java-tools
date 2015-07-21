@@ -1,6 +1,6 @@
 <project default="[template]_jar" name="Create Runnable Jar for Project [Template]">
 	<property name="dir.src" value="src" />
-	<property name="dir.build" value="build" />
+	<property name="dir.build" value="ant_build" />
 
 	<target name="compile">
 		<delete dir="${dir.build}" />

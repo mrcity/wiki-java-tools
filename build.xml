@@ -1,0 +1,19 @@
+<project default="[template]_jar" name="Create Runnable Jar for Project [Template]">
+	<property name="dir.src" value="src"/>
+	<property name="dir.build" value="build"/>
+
+	<target name="compile">
+		<delete dir="${dir.build}"/>
+		<mkdir dir="${dir.build}"/>
+		<javac srcdir="${dir.src}" destdir="${dir.build}"/>
+	</target>
+    <target name="[template]_jar" depends="compile">
+        <jar destfile="[template].jar" filesetmanifest="mergewithoutmain">
+            <manifest>
+                <attribute name="Main-Class" value="app.App"/>
+                <attribute name="Class-Path" value="."/>
+            </manifest>
+            <fileset dir="${dir.build}"/>
+        </jar>
+    </target>
+</project>

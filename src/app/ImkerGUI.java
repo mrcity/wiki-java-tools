@@ -28,7 +28,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
 
 import javax.security.auth.login.LoginException;
 import javax.swing.BorderFactory;
@@ -88,6 +87,7 @@ public class ImkerGUI extends ImkerBase {
 			break;
 		case PRE_DOWNLOAD:
 			try {
+				solveWindowsBug();
 				download();
 				verifyCheckSum();
 				state = State.TERMINATED;
@@ -130,7 +130,7 @@ public class ImkerGUI extends ImkerBase {
 						protected Void doInBackground()
 								throws FileNotFoundException, IOException,
 								LoginException {
-							getFileNames();
+							fetchFileNames();
 							return null;
 						}
 					});
@@ -139,7 +139,7 @@ public class ImkerGUI extends ImkerBase {
 			return;
 		}
 
-		if (fileNames.length == 0) {
+		if (getFileNames().length == 0) {
 			JOptionPane
 					.showMessageDialog(FRAME, MSGS.getString("Error_No_Files"),
 							MSGS.getString("Text_Warning"),
@@ -150,9 +150,9 @@ public class ImkerGUI extends ImkerBase {
 			return;
 		}
 		STATUS_TEXT_FIELD.setText(String.format(
-				MSGS.getString("Prompt_Download"), fileNames.length));
+				MSGS.getString("Prompt_Download"), getFileNames().length));
 		MAIN_BUTTON.setText(String.format(MSGS.getString("Button_Download"),
-				fileNames.length));
+				getFileNames().length));
 		state = State.PRE_DOWNLOAD;
 	}
 
@@ -198,7 +198,7 @@ public class ImkerGUI extends ImkerBase {
 	 * @param progressBar
 	 *            the modal dialog's progress bar
 	 * @param exitButton
-	 *            the exit button
+	 *            the exit button label
 	 * @param worker
 	 *            the worker
 	 * @throws Exception
@@ -239,7 +239,7 @@ public class ImkerGUI extends ImkerBase {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				System.exit(-1);
+				System.exit(0);
 				// // TODO do not exit?
 				// worker.cancel(true);
 				// try {
@@ -302,14 +302,33 @@ public class ImkerGUI extends ImkerBase {
 		return true;
 	}
 
+	private static void solveWindowsBug() {
+		if (!checkWindowsBug())
+			return;
+
+		String[] options = { MSGS.getString("Text_Replace_Chars"),
+				MSGS.getString("Text_Exit") };
+		int userSelection = JOptionPane
+				.showOptionDialog(FRAME, MSGS.getString("Hint_Windows_Bug"),
+						MSGS.getString("Title_Windows_Char_Bug") + " - "
+								+ PROGRAM_NAME, JOptionPane.OK_CANCEL_OPTION,
+						JOptionPane.WARNING_MESSAGE, null, options, options[0]);
+
+		if (userSelection != 0)
+			System.exit(0);
+	}
+
 	/**
 	 * Try to download while blocking the UI with a modal dialog
 	 * 
 	 * @throws Exception
 	 */
 	private static void download() throws Exception {
+		if (checkWindowsBug()) {
+
+		}
 		final JProgressBar progressBarDownload = new JProgressBar(0,
-				fileNames.length);
+				getFileNames().length);
 		progressBarDownload.setStringPainted(true);
 		executeWorker(MSGS.getString("Status_Downloading"),
 				MSGS.getString("Hint_Downloading"), progressBarDownload,
@@ -325,7 +344,8 @@ public class ImkerGUI extends ImkerBase {
 							public void handle(int i, String fileName) {
 								progressBarDownload.setValue(i);
 								STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/"
-										+ fileNames.length + "): " + fileName);
+										+ getFileNames().length + "): "
+										+ fileName);
 							}
 
 							@Override
@@ -352,7 +372,7 @@ public class ImkerGUI extends ImkerBase {
 	private static void verifyCheckSum() throws Exception {
 		final int errors[] = new int[1];
 		final JProgressBar progressBarChecksum = new JProgressBar(0,
-				fileStatuses.length);
+				getFileStatuses().length);
 		progressBarChecksum.setStringPainted(true);
 		executeWorker(MSGS.getString("Status_Checksum"),
 				MSGS.getString("Hint_Checksum"), progressBarChecksum,
@@ -368,7 +388,7 @@ public class ImkerGUI extends ImkerBase {
 							public void handle(int i, String fileName) {
 								progressBarChecksum.setValue(i);
 								STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/"
-										+ fileStatuses.length + "): "
+										+ getFileStatuses().length + "): "
 										+ fileName);
 							}
 
@@ -393,10 +413,10 @@ public class ImkerGUI extends ImkerBase {
 		String errorSample = "";
 		int maxLines = 10;
 		int currLines = 0;
-		for (int i = 0; i < fileStatuses.length; i++) {
-			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR)
+		for (int i = 0; i < getFileStatuses().length; i++) {
+			if (getFileStatuses()[i] == FileStatus.CHECKSUM_ERROR)
 				if (currLines < maxLines) {
-					errorSample += "\n * " + fileNames[i];
+					errorSample += "\n * " + getFileNames()[i];
 					currLines++;
 				} else {
 					errorSample += "\n ...";
@@ -416,10 +436,11 @@ public class ImkerGUI extends ImkerBase {
 		if (userSelection == 1)
 			return; // Selected "No"
 
-		for (int i = 0; i < fileStatuses.length; i++) {
-			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR)
-				Files.delete(new File(outputFolder.getPath() + File.separator
-						+ fileNames[i].substring(FILE_PREFIX.length()))
+		for (int i = 0; i < getFileStatuses().length; i++) {
+			if (getFileStatuses()[i] == FileStatus.CHECKSUM_ERROR)
+				Files.delete(new File(getOutputFolder().getPath()
+						+ File.separator
+						+ getFileNames()[i].substring(FILE_PREFIX.length()))
 						.toPath());
 		}
 
@@ -442,8 +463,7 @@ public class ImkerGUI extends ImkerBase {
 			return;
 		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Select_InOut"));
 		MAIN_BUTTON.setText(MSGS.getString("Button_GetList"));
-		fileNames = null;
-		fileStatuses = null;
+		resetMemory();
 		state = State.PRE_INIT;
 	}
 
@@ -456,8 +476,9 @@ public class ImkerGUI extends ImkerBase {
 	 *             if an IO issue occurs
 	 * @throws LoginException
 	 */
-	protected static void getFileNames() throws FileNotFoundException,
+	protected static void fetchFileNames() throws FileNotFoundException,
 			IOException, LoginException {
+		final String[] fileNames;
 		if (CATEGORY_BUTTON.isSelected()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Category")
 					+ " ...");
@@ -467,7 +488,7 @@ public class ImkerGUI extends ImkerBase {
 				public String[] fetch() throws IOException {
 					// TODO: add argument to scan subcats
 					boolean subcat = false;
-					return wiki.getCategoryMembers(inputCategory, subcat,
+					return getWiki().getCategoryMembers(inputCategory, subcat,
 							Wiki.FILE_NAMESPACE);
 				}
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
@@ -480,7 +501,8 @@ public class ImkerGUI extends ImkerBase {
 					+ " ...");
 			fileNames = parseFileNames(inputFile.getPath());
 		}
-		fileStatuses = new FileStatus[fileNames.length];
+		setFileNames(fileNames);
+		setFileStatuses(new FileStatus[fileNames.length]);
 	}
 
 	/**
@@ -531,19 +553,15 @@ public class ImkerGUI extends ImkerBase {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				JFileChooser folderChooser = new JFileChooser(outputFolder);
+				JFileChooser folderChooser = new JFileChooser(getOutputFolder());
 				folderChooser
 						.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 				folderChooser.setAcceptAllFileFilterUsed(false);
 				folderChooser.showOpenDialog(null);
 
-				outputFolder = folderChooser.getSelectedFile();
-				if (outputFolder == null) {
-					currFolder.setText(null);
-					hasTarget = false;
-					MAIN_BUTTON.setEnabled(false);
-				} else {
-					currFolder.setText(outputFolder.toString());
+				setOutputFolder(folderChooser.getSelectedFile());
+				if (getOutputFolder() != null) {
+					currFolder.setText(getOutputFolder().toString());
 					hasTarget = true;
 					MAIN_BUTTON.setEnabled(hasSource && hasTarget);
 				}
@@ -823,9 +841,7 @@ public class ImkerGUI extends ImkerBase {
 
 	public static void main(String[] args) {
 
-		wiki = new Wiki("commons.wikimedia.org");
-		wiki.setMaxLag(3);
-		wiki.setLogLevel(Level.WARNING);
+		setWiki("commons.wikimedia.org");
 
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {

@@ -5,8 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
-import java.util.logging.Level;
-
 import javax.security.auth.login.LoginException;
 
 import wiki.Wiki;
@@ -20,8 +18,8 @@ public class ImkerCLI extends ImkerBase {
 
 		@Override
 		public void handle(int i, String fileName) {
-			System.out.println("(" + (i + 1) + "/" + fileNames.length + "): "
-					+ fileName);
+			System.out.println("(" + (i + 1) + "/" + getFileNames().length
+					+ "): " + fileName);
 		}
 
 		@Override
@@ -39,15 +37,16 @@ public class ImkerCLI extends ImkerBase {
 		System.out.println();
 		printHelp(args);
 
-		wiki = new Wiki("commons.wikimedia.org");
-		wiki.setMaxLag(3);
-		wiki.setLogLevel(Level.WARNING);
+		setWiki("commons.wikimedia.org");
 
-		outputFolder = getFolder(args[1]);
-		fileNames = getFilenames(args[0]);
+		setFolder(args[1]);
+		setFilenames(args[0]);
 
+		solveWindowsBug();
 		download();
 		verifyChecksum();
+
+		resetMemory();
 	}
 
 	/**
@@ -67,9 +66,9 @@ public class ImkerCLI extends ImkerBase {
 			return;
 		}
 
-		for (int i = 0; i < fileStatuses.length; i++) {
-			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR) {
-				System.out.println(" * " + fileNames[i]);
+		for (int i = 0; i < getFileStatuses().length; i++) {
+			if (getFileStatuses()[i] == FileStatus.CHECKSUM_ERROR) {
+				System.out.println(" * " + getFileNames()[i]);
 			}
 		}
 		System.out.println(String.format(MSGS.getString("Hint_Files_Corrupt"),
@@ -77,15 +76,31 @@ public class ImkerCLI extends ImkerBase {
 
 		promptEnter();
 
-		for (int i = 0; i < fileStatuses.length; i++) {
-			if (fileStatuses[i] == FileStatus.CHECKSUM_ERROR)
-				Files.delete(new File(outputFolder.getPath() + File.separator
-						+ fileNames[i].substring(FILE_PREFIX.length()))
+		for (int i = 0; i < getFileStatuses().length; i++) {
+			if (getFileStatuses()[i] == FileStatus.CHECKSUM_ERROR)
+				Files.delete(new File(getOutputFolder().getPath()
+						+ File.separator
+						+ getFileNames()[i].substring(FILE_PREFIX.length()))
 						.toPath());
 		}
 
 		System.out.println(MSGS.getString("Status_Checksum_Deleted"));
 		System.out.println(MSGS.getString("Status_Restart_Needed"));
+	}
+
+	/**
+	 * Check if affected by the "invalid character windows bug" and ask the user
+	 * to exit or replace those chars
+	 * 
+	 * @throws IOException
+	 *             if an I/O error occurs
+	 */
+	private static void solveWindowsBug() throws IOException {
+		if (!checkWindowsBug())
+			return;
+
+		System.out.println(MSGS.getString("Hint_Windows_Bug"));
+		promptEnter();
 	}
 
 	/**
@@ -100,10 +115,10 @@ public class ImkerCLI extends ImkerBase {
 		System.out.println("\n"
 				+ MSGS.getString("Text_Folder")
 				+ " "
-				+ outputFolder.getPath()
+				+ getOutputFolder().getPath()
 				+ "\n"
 				+ String.format(MSGS.getString("Prompt_Download"),
-						fileNames.length));
+						getFileNames().length));
 		promptEnter();
 
 		downloadLoop(stdOutPrint);
@@ -129,9 +144,8 @@ public class ImkerCLI extends ImkerBase {
 	 * 
 	 * @param pathArg
 	 *            the command line parameter
-	 * @return the folder represented by the path
 	 */
-	private static File getFolder(String pathArg) {
+	private static void setFolder(String pathArg) {
 
 		int pathIndex = pathArg.indexOf(OUT_PARAM);
 
@@ -143,12 +157,11 @@ public class ImkerCLI extends ImkerBase {
 		String path = pathArg.substring(pathIndex);
 		File folder = new File(path);
 		if (folder.isDirectory()) {
-			return folder;
+			setOutputFolder(folder);
 		} else {
 			System.out.println(MSGS.getString("Status_Not_A_Folder") + " "
 					+ path);
 			System.exit(-1);
-			return null;
 		}
 	}
 
@@ -158,14 +171,13 @@ public class ImkerCLI extends ImkerBase {
 	 * 
 	 * @param inputArg
 	 *            the command line parameter
-	 * @return a String array with all file names
 	 * @throws FileNotFoundException
 	 *             if the file parameter points to a missing file
 	 * @throws IOException
 	 *             if a IO issue occurs (network or file related)
 	 * @throws LoginException
 	 */
-	private static String[] getFilenames(String inputArg)
+	private static void setFilenames(String inputArg)
 			throws FileNotFoundException, IOException, LoginException {
 
 		int catIndex = inputArg.indexOf(CATEGORY_PARAM);
@@ -173,7 +185,7 @@ public class ImkerCLI extends ImkerBase {
 		int fileIndex = inputArg.indexOf(FILE_PARAM);
 
 		final String arg;
-		final String[] fnames;
+		String[] fnames = null;
 		if (catIndex > 0) {
 			arg = inputArg.substring(catIndex + CATEGORY_PARAM.length());
 			fnames = (String[]) attemptFetch(new WikiAPI() {
@@ -181,7 +193,7 @@ public class ImkerCLI extends ImkerBase {
 				@Override
 				public String[] fetch() throws IOException {
 					boolean subcat = false; // TODO: add argument --subcat
-					return wiki.getCategoryMembers(arg, subcat,
+					return getWiki().getCategoryMembers(arg, subcat,
 							Wiki.FILE_NAMESPACE);
 				}
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
@@ -195,10 +207,9 @@ public class ImkerCLI extends ImkerBase {
 			// exit and warn user
 			printHelp(null);
 			System.exit(-1);
-			return null;
 		}
-		fileStatuses = new FileStatus[fnames.length];
-		return fnames;
+		setFileStatuses(new FileStatus[fnames.length]);
+		setFileNames(fnames);
 	}
 
 	/**

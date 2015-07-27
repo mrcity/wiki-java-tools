@@ -14,6 +14,7 @@ import java.util.LinkedList;
 import java.util.Locale;
 import java.util.Queue;
 import java.util.ResourceBundle;
+import java.util.logging.Level;
 
 import javax.security.auth.login.LoginException;
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
@@ -42,16 +43,21 @@ interface StatusHandler {
 }
 
 public class ImkerBase extends App {
-	protected static final String VERSION = "v15.07.03";
+	protected static final String VERSION = "v15.07.23";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String FILE_PREFIX = "File:";
-	protected static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
+	private static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
 			">", "[", "]", "|" };
-	protected static Wiki wiki = null;
-	protected static String[] fileNames = null;
-	protected static FileStatus[] fileStatuses = null;
-	protected static File outputFolder = null;
+	private static final String[] INVALID_WINDOWS_CHARS = { "?", "\"", "*" };
+	private static final char REPLACE_CHAR = '_';
+	private static Wiki wiki;
+	private static File outputFolder;
+	// Variables only valid for one round; Need invalidation {
+	private static String[] fileNames;
+	private static FileStatus[] fileStatuses;
+	private static boolean windowsCharacterBug = false;
+	// }
 	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
 			"i18n/Bundle", Locale.getDefault());
 
@@ -105,8 +111,9 @@ public class ImkerBase extends App {
 			final String fileName = fileNames[i]
 					.substring(FILE_PREFIX.length());
 			sh.handle(i, fileName);
+
 			final File outputFile = new File(outputFolder.getPath()
-					+ File.separator + fileName);
+					+ File.separator + windowsNormalize(fileName));
 			if (outputFile.exists()) {
 				fileStatuses[i] = FileStatus.DOWNLOADED;
 				sh.handleConclusion(" ... "
@@ -133,6 +140,25 @@ public class ImkerBase extends App {
 	}
 
 	/**
+	 * Returns true if there are invalid Windows characters in at least one file
+	 * name and the operating system is windows
+	 * 
+	 * @return if affected by the "windows bug"
+	 */
+	protected static boolean checkWindowsBug() {
+		if (!System.getProperty("os.name").startsWith("Windows"))
+			return false;
+		for (String filename : fileNames) {
+			for (String invalidChar : INVALID_WINDOWS_CHARS)
+				if (filename.contains(invalidChar)) {
+					windowsCharacterBug = true;
+					return true;
+				}
+		}
+		return false;
+	}
+
+	/**
 	 * Loop over all file names and call the StatusHandler; All files with
 	 * FileStatus.DOWNLOADED get their checksum confirmed
 	 * 
@@ -155,7 +181,7 @@ public class ImkerBase extends App {
 			if (fileStatuses[i] == FileStatus.DOWNLOADED) {
 
 				String localSHA1 = calcSHA1(new File(outputFolder.getPath()
-						+ File.separator + fileName));
+						+ File.separator + windowsNormalize(fileName)));
 				String wikiSHA1 = ((String) wiki.getFileMetadata(fileName).get(
 						"sha1")).toUpperCase();
 
@@ -172,6 +198,21 @@ public class ImkerBase extends App {
 			}
 		}
 		return errors;
+	}
+
+	/**
+	 * Replace invalid characters in this file name by a valid one
+	 * 
+	 * @param fileName
+	 *            the initial file name
+	 * @return the resulting file name
+	 */
+	private static String windowsNormalize(String fileName) {
+		if (windowsCharacterBug)
+			for (String invalidChar : INVALID_WINDOWS_CHARS)
+				fileName = fileName
+						.replace(invalidChar.charAt(0), REPLACE_CHAR);
+		return fileName;
 	}
 
 	/**
@@ -262,6 +303,96 @@ public class ImkerBase extends App {
 		if (line.length() == "File:".length())
 			return null;
 		return line;
+	}
+
+	/**
+	 * Reset the current round; Should be called after the download was verified
+	 */
+	protected static void resetMemory() {
+		setFileNames(null);
+		setFileStatuses(null);
+		windowsCharacterBug = false;
+	}
+
+	/**
+	 * Return the current array of file names
+	 * 
+	 * @return the array
+	 */
+	protected static String[] getFileNames() {
+		return fileNames;
+	}
+
+	/**
+	 * Set the array of file names
+	 * 
+	 * @param fileNames
+	 *            the new array of file names
+	 */
+	protected static void setFileNames(String[] fileNames) {
+		ImkerBase.fileNames = fileNames;
+	}
+
+	/**
+	 * Return the array of file statuses
+	 * 
+	 * @return the array
+	 */
+	protected static FileStatus[] getFileStatuses() {
+		return fileStatuses;
+	}
+
+	/**
+	 * Set the array of file statuses
+	 * 
+	 * @param fileStatuses
+	 *            the new array of file statuses
+	 */
+	protected static void setFileStatuses(FileStatus[] fileStatuses) {
+		ImkerBase.fileStatuses = fileStatuses;
+	}
+
+	/**
+	 * Return the output folder
+	 * 
+	 * @return the folder
+	 */
+	public static File getOutputFolder() {
+		return outputFolder;
+	}
+
+	/**
+	 * Set the output folder if the argument is not null; Do nothing if the
+	 * argument is null or not a directory
+	 * 
+	 * @param outputFolder
+	 *            a folder or null
+	 */
+	public static void setOutputFolder(File outputFolder) {
+		if (outputFolder == null || !outputFolder.isDirectory())
+			return;
+		ImkerBase.outputFolder = outputFolder;
+	}
+
+	/**
+	 * Return the current wiki
+	 * 
+	 * @return the wiki
+	 */
+	public static Wiki getWiki() {
+		return wiki;
+	}
+
+	/**
+	 * Set the wiki to the wiki represented by the given domain name
+	 * 
+	 * @param domain
+	 *            the wiki domain name e.g. en.wikipedia.org
+	 */
+	public static void setWiki(String domain) {
+		ImkerBase.wiki = new Wiki(domain);
+		wiki.setMaxLag(3);
+		wiki.setLogLevel(Level.WARNING);
 	}
 
 }

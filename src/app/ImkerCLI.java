@@ -10,11 +10,11 @@ import javax.security.auth.login.LoginException;
 import wiki.Wiki;
 
 public class ImkerCLI extends ImkerBase {
-	private static final String CATEGORY_PARAM = "-category=";
-	private static final String PAGE_PARAM = "-page=";
-	private static final String FILE_PARAM = "-file=";
-	private static final String OUT_PARAM = "-outfolder=";
-	private static final StatusHandler stdOutPrint = new StatusHandler() {
+	private final String CATEGORY_PARAM = "-category=";
+	private final String PAGE_PARAM = "-page=";
+	private final String FILE_PARAM = "-file=";
+	private final String OUT_PARAM = "-outfolder=";
+	private final StatusHandler stdOutPrint = new StatusHandler() {
 
 		@Override
 		public void handle(int i, String fileName) {
@@ -31,22 +31,24 @@ public class ImkerCLI extends ImkerBase {
 	public static void main(String[] args) throws FileNotFoundException,
 			IOException, LoginException, NoSuchAlgorithmException {
 
+		final ImkerCLI cli = new ImkerCLI();
+
 		System.out.println(PROGRAM_NAME);
 		System.out.println(MSGS.getString("Description_Program"));
 		System.out.println(VERSION);
 		System.out.println();
-		printHelp(args);
+		cli.printHelp(args);
 
-		setWiki("commons.wikimedia.org");
+		cli.setWiki("commons.wikimedia.org");
 
-		setFolder(args[1]);
-		setFilenames(args[0]);
+		cli.setFolder(args[1]);
+		cli.setFilenames(args[0]);
 
-		solveWindowsBug();
-		download();
-		verifyChecksum();
+		cli.solveWindowsBug();
+		cli.download();
+		cli.verifyChecksum();
 
-		resetMemory();
+		cli.resetMemory();
 	}
 
 	/**
@@ -56,8 +58,7 @@ public class ImkerCLI extends ImkerBase {
 	 * @throws NoSuchAlgorithmException
 	 * @throws IOException
 	 */
-	private static void verifyChecksum() throws NoSuchAlgorithmException,
-			IOException {
+	private void verifyChecksum() throws NoSuchAlgorithmException, IOException {
 		System.out.println(MSGS.getString("Status_Checksum"));
 		int errors = checksumLoop(stdOutPrint);
 		System.out.println(String.format(
@@ -95,7 +96,7 @@ public class ImkerCLI extends ImkerBase {
 	 * @throws IOException
 	 *             if an I/O error occurs
 	 */
-	private static void solveWindowsBug() throws IOException {
+	private void solveWindowsBug() throws IOException {
 		if (!checkWindowsBug())
 			return;
 
@@ -110,7 +111,7 @@ public class ImkerCLI extends ImkerBase {
 	 *             if a network error occurs
 	 * @throws LoginException
 	 */
-	private static void download() throws IOException, LoginException {
+	private void download() throws IOException, LoginException {
 
 		System.out.println("\n"
 				+ MSGS.getString("Text_Folder")
@@ -133,7 +134,7 @@ public class ImkerCLI extends ImkerBase {
 	 *             if an I/O error occurs
 	 * 
 	 */
-	private static void promptEnter() throws IOException {
+	private void promptEnter() throws IOException {
 		System.out.println(MSGS.getString("Prompt_Enter"));
 		System.in.read();
 	}
@@ -145,7 +146,7 @@ public class ImkerCLI extends ImkerBase {
 	 * @param pathArg
 	 *            the command line parameter
 	 */
-	private static void setFolder(String pathArg) {
+	private void setFolder(String pathArg) {
 
 		int pathIndex = pathArg.indexOf(OUT_PARAM);
 
@@ -177,8 +178,8 @@ public class ImkerCLI extends ImkerBase {
 	 *             if a IO issue occurs (network or file related)
 	 * @throws LoginException
 	 */
-	private static void setFilenames(String inputArg)
-			throws FileNotFoundException, IOException, LoginException {
+	private void setFilenames(String inputArg) throws FileNotFoundException,
+			IOException, LoginException {
 
 		int catIndex = inputArg.indexOf(CATEGORY_PARAM);
 		int pageIndex = inputArg.indexOf(PAGE_PARAM);
@@ -224,7 +225,7 @@ public class ImkerCLI extends ImkerBase {
 	 * @throws IOException
 	 *             if there was an issue reading the file
 	 */
-	private static String[] readFileNames(String localFilePath)
+	private String[] readFileNames(String localFilePath)
 			throws FileNotFoundException, IOException {
 		File input = new File(localFilePath);
 		if (input.isFile()) {
@@ -244,7 +245,7 @@ public class ImkerCLI extends ImkerBase {
 	 * @param args
 	 *            the command line arguments or null
 	 */
-	private static void printHelp(String[] args) {
+	private void printHelp(String[] args) {
 
 		String[] expectedArgs = { MSGS.getString("CLI_Arg_Src"),
 				MSGS.getString("CLI_Arg_Output") };

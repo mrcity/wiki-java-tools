@@ -42,8 +42,8 @@ interface StatusHandler {
 	void handleConclusion(String status);
 }
 
-public class ImkerBase extends App {
-	protected static final String VERSION = "v15.07.23";
+public abstract class ImkerBase extends App {
+	protected static final String VERSION = "v15.08.03";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String FILE_PREFIX = "File:";
@@ -51,12 +51,12 @@ public class ImkerBase extends App {
 			">", "[", "]", "|" };
 	private static final String[] INVALID_WINDOWS_CHARS = { "?", "\"", "*" };
 	private static final char REPLACE_CHAR = '_';
-	private static Wiki wiki;
-	private static File outputFolder;
+	private Wiki wiki;
+	private File outputFolder;
 	// Variables only valid for one round; Need invalidation {
-	private static String[] fileNames;
-	private static FileStatus[] fileStatuses;
-	private static boolean windowsCharacterBug = false;
+	private String[] fileNames;
+	private FileStatus[] fileStatuses;
+	private boolean windowsCharacterBug = false;
 	// }
 	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
 			"i18n/Bundle", Locale.getDefault());
@@ -76,7 +76,7 @@ public class ImkerBase extends App {
 	 * @throws IOException
 	 *             if there was an issue reading the file
 	 */
-	protected static String[] parseFileNames(String localFilePath)
+	protected String[] parseFileNames(String localFilePath)
 			throws FileNotFoundException, IOException {
 		// TODO resolve redirects
 		Queue<String> FileNameQueue = new LinkedList<String>();
@@ -105,7 +105,7 @@ public class ImkerBase extends App {
 	 *             if an io error (network or file related) occurs
 	 * @throws LoginException
 	 */
-	protected static void downloadLoop(StatusHandler sh) throws IOException,
+	protected void downloadLoop(StatusHandler sh) throws IOException,
 			LoginException {
 		for (int i = 0; i < fileNames.length; i++) {
 			final String fileName = fileNames[i]
@@ -145,7 +145,7 @@ public class ImkerBase extends App {
 	 * 
 	 * @return if affected by the "windows bug"
 	 */
-	protected static boolean checkWindowsBug() {
+	protected boolean checkWindowsBug() {
 		if (!System.getProperty("os.name").startsWith("Windows"))
 			return false;
 		for (String filename : fileNames) {
@@ -171,8 +171,8 @@ public class ImkerBase extends App {
 	 * @throws FileNotFoundException
 	 *             if the file does not exist
 	 */
-	protected static int checksumLoop(StatusHandler sh)
-			throws FileNotFoundException, NoSuchAlgorithmException, IOException {
+	protected int checksumLoop(StatusHandler sh) throws FileNotFoundException,
+			NoSuchAlgorithmException, IOException {
 		int errors = 0;
 		for (int i = 0; i < fileStatuses.length; i++) {
 			final String fileName = fileNames[i]
@@ -207,7 +207,7 @@ public class ImkerBase extends App {
 	 *            the initial file name
 	 * @return the resulting file name
 	 */
-	private static String windowsNormalize(String fileName) {
+	private String windowsNormalize(String fileName) {
 		if (windowsCharacterBug)
 			for (String invalidChar : INVALID_WINDOWS_CHARS)
 				fileName = fileName
@@ -230,7 +230,7 @@ public class ImkerBase extends App {
 	 * @throws IOException
 	 *             if a network error occurs
 	 */
-	protected static String[] getImagesOnPage(final String title,
+	protected String[] getImagesOnPage(final String title,
 			final boolean resolveRedirects) throws LoginException, IOException {
 		String[] list = (String[]) attemptFetch(new WikiAPI() {
 
@@ -269,7 +269,7 @@ public class ImkerBase extends App {
 	 * @throws NoSuchAlgorithmException
 	 *             should never happen
 	 */
-	private static String calcSHA1(File file) throws FileNotFoundException,
+	private String calcSHA1(File file) throws FileNotFoundException,
 			IOException, NoSuchAlgorithmException {
 
 		MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
@@ -294,7 +294,7 @@ public class ImkerBase extends App {
 	 *            the String to be normalized
 	 * @return a normalized file name or null
 	 */
-	protected static String normalizeFileName(String line) {
+	protected String normalizeFileName(String line) {
 		for (String invalidChar : INVALID_FILE_NAME_CHARS) {
 			if (line.contains(invalidChar))
 				return null;
@@ -308,7 +308,7 @@ public class ImkerBase extends App {
 	/**
 	 * Reset the current round; Should be called after the download was verified
 	 */
-	protected static void resetMemory() {
+	protected void resetMemory() {
 		setFileNames(null);
 		setFileStatuses(null);
 		windowsCharacterBug = false;
@@ -319,7 +319,7 @@ public class ImkerBase extends App {
 	 * 
 	 * @return the array
 	 */
-	protected static String[] getFileNames() {
+	protected String[] getFileNames() {
 		return fileNames;
 	}
 
@@ -329,8 +329,8 @@ public class ImkerBase extends App {
 	 * @param fileNames
 	 *            the new array of file names
 	 */
-	protected static void setFileNames(String[] fileNames) {
-		ImkerBase.fileNames = fileNames;
+	protected void setFileNames(String[] fileNames) {
+		this.fileNames = fileNames;
 	}
 
 	/**
@@ -338,7 +338,7 @@ public class ImkerBase extends App {
 	 * 
 	 * @return the array
 	 */
-	protected static FileStatus[] getFileStatuses() {
+	protected FileStatus[] getFileStatuses() {
 		return fileStatuses;
 	}
 
@@ -348,8 +348,8 @@ public class ImkerBase extends App {
 	 * @param fileStatuses
 	 *            the new array of file statuses
 	 */
-	protected static void setFileStatuses(FileStatus[] fileStatuses) {
-		ImkerBase.fileStatuses = fileStatuses;
+	protected void setFileStatuses(FileStatus[] fileStatuses) {
+		this.fileStatuses = fileStatuses;
 	}
 
 	/**
@@ -357,7 +357,7 @@ public class ImkerBase extends App {
 	 * 
 	 * @return the folder
 	 */
-	public static File getOutputFolder() {
+	public File getOutputFolder() {
 		return outputFolder;
 	}
 
@@ -368,10 +368,10 @@ public class ImkerBase extends App {
 	 * @param outputFolder
 	 *            a folder or null
 	 */
-	public static void setOutputFolder(File outputFolder) {
+	public void setOutputFolder(File outputFolder) {
 		if (outputFolder == null || !outputFolder.isDirectory())
 			return;
-		ImkerBase.outputFolder = outputFolder;
+		this.outputFolder = outputFolder;
 	}
 
 	/**
@@ -379,7 +379,7 @@ public class ImkerBase extends App {
 	 * 
 	 * @return the wiki
 	 */
-	public static Wiki getWiki() {
+	public Wiki getWiki() {
 		return wiki;
 	}
 
@@ -389,8 +389,8 @@ public class ImkerBase extends App {
 	 * @param domain
 	 *            the wiki domain name e.g. en.wikipedia.org
 	 */
-	public static void setWiki(String domain) {
-		ImkerBase.wiki = new Wiki(domain);
+	public void setWiki(String domain) {
+		wiki = new Wiki(domain);
 		wiki.setMaxLag(3);
 		wiki.setLogLevel(Level.WARNING);
 	}

@@ -13,6 +13,59 @@ import java.util.regex.Pattern;
 
 import javax.security.auth.login.LoginException;
 
+class CategoryCreator {
+	private HashSet<String> createdCategories;
+	private Wiki wiki;
+
+	/**
+	 * Construct the CategoryCreator and pass in any categories that should be
+	 * considered existing
+	 * 
+	 * @param wiki
+	 *            the wiki where new cateogies should be created
+	 * @param createdCategories
+	 *            the already existing categories
+	 */
+	public CategoryCreator(Wiki wiki, String[] createdCategories) {
+		this.wiki = wiki;
+		if (createdCategories == null)
+			createdCategories = new String[] {};
+		this.createdCategories = new HashSet<String>();
+		for (String cat : createdCategories)
+			try {
+				addCategory(cat, null, false);
+			} catch (Exception e) {
+				// never happens
+				e.printStackTrace();
+				System.exit(-1);
+			}
+	}
+
+	/**
+	 * Check if the given category already exists and create it if not
+	 * 
+	 * @param categoryName
+	 *            the category to check
+	 * @param text
+	 *            the text of the category when created
+	 * @param mayNotExist
+	 *            set this to true! If this is false, NO check is done if the
+	 *            category exists on-wiki
+	 * @throws LoginException
+	 * @throws IOException
+	 *             if a network error occurs
+	 */
+	public void addCategory(String categoryName, String text,
+			boolean mayNotExist) throws LoginException, IOException {
+		categoryName = "Category:"
+				+ categoryName.replaceFirst("^([cC]ategory:)", "");
+		if (createdCategories.add(categoryName) && mayNotExist) {
+			if (!wiki.exists(new String[] { categoryName })[0])
+				wiki.edit(categoryName, text, "Creating category");
+		}
+	}
+}
+
 public class WikiPage {
 	private static final String NO_TOKEN = "true";
 	private static final WikiCategory REVOKED_CATEGORY = new WikiCategory("",
@@ -20,6 +73,8 @@ public class WikiPage {
 	private static final Pattern UPLOADED_BY = Pattern
 			.compile(Commons.CASE_INSENSITIVE
 					+ "uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]]");
+	private static String UPDLOADED_BY_USER_CATEGORY_TEXT = "__HIDDENCAT__"
+			+ "\n[[Category:Files by uploader]]";
 
 	private boolean isFile;
 	// private boolean isRedirect; // TODO implementation?
@@ -33,6 +88,7 @@ public class WikiPage {
 	private boolean duplicateCategoryCleanup;
 	private boolean isCleanedUp_overcat;
 	private boolean cleanupAnyway;
+	private CategoryCreator catGen;
 
 	/**
 	 * Creates a new object of the class WikiPage. It is possible to clean up
@@ -48,6 +104,7 @@ public class WikiPage {
 		this.isFile = name.split(":", 2)[0].toLowerCase().equals("file");
 		// this.isRedirect = wiki.isRedirect( fname );
 		this.wiki = wiki;
+		this.catGen = new CategoryCreator(wiki, null);
 		this.name = name;
 		this.editSummary = "";
 		this.setPlainText(wiki.getPageText(name));
@@ -98,7 +155,7 @@ public class WikiPage {
 				.size()]);
 	}
 
-	public void cleanupWikitext() {
+	public void cleanupWikitext() throws LoginException, IOException {
 		this.isCleanedUp = true;
 		// Stuff that involves comments to be replaced comes here
 		this.setPlainText(regexCleaner(getPlainText(), Commons.COMMENT_REGEX,
@@ -138,9 +195,15 @@ public class WikiPage {
 					Matcher m = UPLOADED_BY.matcher(textPart);
 					m.find(); // This is always true because
 								// Commons.UPLOADED_BY_REGEX already matched
-					appendToEditSummary("Removing redundant and possibly misleading information: \""
+					appendToEditSummary("Transforming misleading information into category: \""
 							+ m.group() + "\". ");
-					appendToPlainText += "<!-- " + m.group() + " -->";
+					String userName = m.group().split("User:", 2)[1].split(
+							"\\|", 2)[0];
+					String userCategory = "Category:Uploaded by user "
+							+ userName;
+					catGen.addCategory(userCategory,
+							UPDLOADED_BY_USER_CATEGORY_TEXT, true);
+					appendToPlainText += "[[" + userCategory + "]]";
 					textPart = cleanText;
 				}
 				cleanText = regexCleaner(textPart, Commons.DATE_REGEX, false);
@@ -198,7 +261,8 @@ public class WikiPage {
 			if (getEditSummary().length() > 0)
 				appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
 		}
-		String[] splitPlainText = getPlainText().split("(?i)\\[\\[category:", 2);
+		String[] splitPlainText = getPlainText()
+				.split("(?i)\\[\\[category:", 2);
 		this.setPlainText(splitPlainText[0]
 				+ "\n"
 				+ appendToPlainText
@@ -312,9 +376,10 @@ public class WikiPage {
 	 * @param ignoreHidden
 	 *            If hidden categories should be ignored during the search
 	 * @throws IOException
+	 * @throws LoginException
 	 */
 	public void cleanupOvercat(int depth, boolean ignoreHidden)
-			throws IOException {
+			throws IOException, LoginException {
 		// if (isRedirect)
 		// return;
 		if (!isCleanedUp)
@@ -687,8 +752,10 @@ public class WikiPage {
 	 * 
 	 * @return The Category array with no duplicate entries
 	 * @throws IOException
+	 * @throws LoginException
 	 */
-	private WikiCategory[] getParentCatsNoDupes() throws IOException {
+	private WikiCategory[] getParentCatsNoDupes() throws IOException,
+			LoginException {
 		if (isCleanedUp == false)
 			this.cleanupWikitext();
 		if (parents == null) {

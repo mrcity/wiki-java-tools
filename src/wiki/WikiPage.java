@@ -198,8 +198,8 @@ public class WikiPage {
 								// Commons.UPLOADED_BY_REGEX already matched
 					appendToEditSummary("Transforming misleading information into category: \""
 							+ m.group() + "\". ");
-					String userName = m.group().split("User:", 2)[1].split(
-							"\\|", 2)[0];
+					String userName = firstCharToUpperCase(m.group().split(
+							"User:", 2)[1].split("\\|", 2)[0]);
 					String userCategory = "Category:Uploaded by user "
 							+ userName;
 					catGen.addCategory(userCategory, String.format(

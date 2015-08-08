@@ -74,6 +74,7 @@ public class WikiPage {
 			.compile(Commons.CASE_INSENSITIVE
 					+ "uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]]");
 	private static String UPDLOADED_BY_USER_CATEGORY_TEXT = "__HIDDENCAT__"
+			+ "\nThis category contains flickr uploads by [[User:%s]]."
 			+ "\n[[Category:Files by uploader]]";
 
 	private boolean isFile;
@@ -201,8 +202,8 @@ public class WikiPage {
 							"\\|", 2)[0];
 					String userCategory = "Category:Uploaded by user "
 							+ userName;
-					catGen.addCategory(userCategory,
-							UPDLOADED_BY_USER_CATEGORY_TEXT, true);
+					catGen.addCategory(userCategory, String.format(
+							UPDLOADED_BY_USER_CATEGORY_TEXT, userName), true);
 					appendToPlainText += "[[" + userCategory + "]]";
 					textPart = cleanText;
 				}

@@ -26,7 +26,7 @@ public class GIFburner extends App {
 	static String optiPNGexe;
 	final static String COMMONS_DELINKER_PAGE = "User:CommonsDelinker/commands";
 	final static int WAIT_AFTER_COMDEL_REQUEST = 15; // in minutes
-	final static String VERSION = "v15.07.04";
+	final static String VERSION = "v15.07.05";
 
 	static String linkList = "";
 	static Queue<String> deleteQueue = new LinkedList<>();
@@ -127,6 +127,7 @@ public class GIFburner extends App {
 		String[] files = commons.getCategoryMembers(category,
 				new int[] { Wiki.FILE_NAMESPACE });
 		for (String strLine : files) {
+			strLine = strLine.substring("File:".length());
 
 			final WikiPage source;
 			source = new WikiPage(commons, "File:" + strLine);
@@ -141,8 +142,7 @@ public class GIFburner extends App {
 			if (!metadata.contains("mime=image/gif")) {
 				System.out.println("Skip: " + source.getName()
 						+ " (Not image/gif)");
-				System.exit(-1);
-				return;
+				continue;
 			}
 			if (metadata.contains("frameCount=1, ")) {
 

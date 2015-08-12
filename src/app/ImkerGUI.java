@@ -324,9 +324,6 @@ public class ImkerGUI extends ImkerBase {
 	 * @throws Exception
 	 */
 	private void download() throws Exception {
-		if (checkWindowsBug()) {
-
-		}
 		final JProgressBar progressBarDownload = new JProgressBar(0,
 				getFileNames().length);
 		progressBarDownload.setStringPainted(true);

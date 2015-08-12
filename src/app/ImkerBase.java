@@ -7,6 +7,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashSet;
@@ -43,14 +45,13 @@ interface StatusHandler {
 }
 
 public abstract class ImkerBase extends App {
-	protected static final String VERSION = "v15.08.03";
+	protected static final String VERSION = "v15.08.04";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String FILE_PREFIX = "File:";
 	private static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
 			">", "[", "]", "|" };
 	private static final String[] INVALID_WINDOWS_CHARS = { "?", "\"", "*" };
-	private static final char REPLACE_CHAR = '_';
 	private Wiki wiki;
 	private File outputFolder;
 	// Variables only valid for one round; Need invalidation {
@@ -209,9 +210,14 @@ public abstract class ImkerBase extends App {
 	 */
 	private String windowsNormalize(String fileName) {
 		if (windowsCharacterBug)
-			for (String invalidChar : INVALID_WINDOWS_CHARS)
-				fileName = fileName
-						.replace(invalidChar.charAt(0), REPLACE_CHAR);
+			try {
+				fileName = URLEncoder.encode(fileName, "UTF-8").replace("*",
+						"%2A");
+			} catch (UnsupportedEncodingException e) {
+				// never happens
+				e.printStackTrace();
+				System.exit(-1);
+			}
 		return fileName;
 	}
 

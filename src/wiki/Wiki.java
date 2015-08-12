@@ -2063,10 +2063,7 @@ public class Wiki implements Serializable
     }
 
     /**
-     *  Gets the list of images used on a particular page. If there are
-     *  redirected images, both the source and target page are included. Capped
-     *  at <tt>max</tt> number of images, there's no reason why there should be
-     *  more than that.
+     *  Gets the list of images used on a particular page.
      *
      *  @param title a page
      *  @return the list of images used in the page.  Note that each String in the array will begin with the
@@ -2077,16 +2074,23 @@ public class Wiki implements Serializable
     public String[] getImagesOnPage(String title) throws IOException
     {
         String url = query + "prop=images&imlimit=max&titles=" + encode(title, true);
-        String line = fetch(url, "getImagesOnPage");
-
-        // xml form: <im ns="6" title="File:Example.jpg" />
+        String line = null;
         List<String> images = new ArrayList<>(750);
-        for (int a = line.indexOf("<im "); a > 0; a = line.indexOf("<im ", ++a))
-            images.add(parseAttribute(line, "title", a));
+        String continueKey = null;
 
-        int temp = images.size();
-        log(Level.INFO, "getImagesOnPage", "Successfully retrieved images used on " + title + " (" + temp + " images)");
-        return images.toArray(new String[temp]);
+        do
+        {
+            line = fetch(continueKey == null ? url : url + "&imcontinue=" + continueKey, "getImagesOnPage");
+
+            // xml form: <im ns="6" title="File:Example.jpg" />
+            for (int a = line.indexOf("<im "); a > 0; a = line.indexOf("<im ", ++a))
+                images.add(parseAttribute(line, "title", a));
+            continueKey = parseAttribute(line, "imcontinue", 0);
+        }
+        while (line.contains("<query-continue>"));
+
+        log(Level.INFO, "getImagesOnPage", "Successfully retrieved images used on " + title + " (" + images.size() + " images)");
+        return images.toArray(new String[images.size()]);
     }
 
     /**

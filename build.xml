@@ -31,6 +31,8 @@
 	</target>
 	<target name="imker_jars" depends="imker_cli_jar,imker_gui_jar">
 		<echo>Jar files created.</echo>
+	</target>
+	<target name="dist" depends="imker_jars">
 		<taskdef name="launch4j" classname="net.sf.launch4j.ant.Launch4jTask" classpath="${dir.launch4j}/launch4j.jar:${dir.launch4j}/lib/xstream.jar" />
 		<launch4j configFile="${dir.dist}/launch4jconfig.xml" />
 		<echo>Windows executable created.</echo>

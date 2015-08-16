@@ -1,6 +1,5 @@
 package app;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -23,27 +22,31 @@ enum Regex {
 					(Flock.REGEX_FLAGS + ".*?\\{\\{flickr.*?photo_id.??\\=.??([0-9]*).*?"),
 					(Flock.REGEX_FLAGS + ".*?(?:http\\:\\/\\/)?.*?\\.static\\.flickr\\.com\\/.*?\\/([0-9]*).*?\\.jpg.*") },
 			"flickrreview"),
-	// Also check for panoramio
+
 	PANORAMIO(
 			new String[] {
 					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/(www)?\\.panoramio\\.com\\/photo\\/\\d+.*"),
 					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/(www)?\\.panoramio\\.com\\/user\\/\\d+\\?with_photo_id=\\d+.*") },
 			"Panoramioreview"),
-	// Also check for Picasa
+
 	PICASA(
 			new String[] { (Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/picasaweb\\.google\\.com\\/[a-z0-9]+\\/[^#]+\\#(slideshow\\/)?\\d+.*") },
 			"Picasareview"),
-	// Also check for Mushroom Observer
+
 	MUSHROOMOBSERVER(
 			new String[] {
 					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/mushroomobserver\\.org\\/image\\/show_image\\/\\d+.*"),
 					(Flock.REGEX_FLAGS + ".*?\\{\\{MushroomObserver[^}{]*\\}\\}.*") },
 			"LicenseReview"),
-	// Also check for Forestryimages
+
 	FORESTRYIMAGES(
 			new String[] {
 					(Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/(www\\.)?forestryimages\\.org\\/browse\\/detail\\.cfm\\?imgnum\\=\\d+.*"),
 					(Flock.REGEX_FLAGS + ".*?\\{\\{Forestryimages[^}{]*\\}\\}.*") },
+			"LicenseReview"),
+
+	WIKIA(
+			new String[] { (Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/[a-z0-9]*?\\.?wikia\\.com\\/.*") },
 			"LicenseReview"),
 
 	VALID_SOURCE_OR_LICENSE(
@@ -87,7 +90,7 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.06.16";
+	static final String VERSION = "v15.08.16";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;

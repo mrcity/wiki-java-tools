@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import javax.security.auth.login.LoginException;
 
+import wiki.CategoryCreator;
+import wiki.Commons;
 import wiki.Wiki;
 import wiki.WikiPage;
 
@@ -21,8 +23,10 @@ public class Test {
 				"File:CSX in the The New River Gorge (4035380395).jpg" };
 
 		WikiPage target;
+		final CategoryCreator catGen = new CategoryCreator(commons,
+				Commons.FLICKR_TRACKING_CATEGORY_OPT_OUT);
 		for (String f : testFileQA) {
-			target = new WikiPage(commons, f);
+			target = new WikiPage(commons, f, catGen);
 			target.cleanupWikitext();
 			if (!target.getPlainText().matches(
 					"(?is)" + ".*?\\[\\[category:.+?<!--.*")

@@ -153,7 +153,8 @@ public class WikiPage {
 					catGen.addCategory(userCategory, String.format(
 							Commons.UPDLOADED_BY_USER_CATEGORY_TEXT, userName),
 							true);
-					appendToPlainText += "[[" + userCategory + "]]";
+					if (!userCategory.isEmpty())
+						appendToPlainText += "[[" + userCategory + "]]";
 					textPart = cleanText;
 				}
 				cleanText = regexCleaner(textPart, Commons.DATE_REGEX, false);

@@ -1,8 +1,23 @@
 package wiki;
 
+import java.util.regex.Pattern;
+
 public class Commons {
 	public static final String CASE_INSENSITIVE = "(?iu)";
 	public static final String CASE_INSENSITIVE_MULTILINE = "(?ium)";
+	public static final Pattern UPLOADED_BY = Pattern
+			.compile(Commons.CASE_INSENSITIVE
+					+ "uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]]");
+	public static String UPDLOADED_BY_USER_CATEGORY_TEXT = "__HIDDENCAT__"
+			+ "\nThis category contains flickr uploads by [[User:%s]]."
+			+ "\n[[Category:Flickr files by uploader]]";
+	public static final String[] FLICKR_TRACKING_CATEGORY_OPT_OUT = { "Category:Uploaded by user Tm" };
+	public static final String[][] FLICKR_TRACKING_CATEGORY_FLAVOR_REGEX = {
+			{ CASE_INSENSITIVE + FLICKR_TRACKING_CATEGORY_OPT_OUT[0], "" },
+			{ CASE_INSENSITIVE + "Category:Uploaded by user Hike395",
+					"Category:Files by User:Hike395 from flickr" },
+			{ CASE_INSENSITIVE + "Category:Uploaded by user Richard001",
+					"Category:Flickr files uploaded by User:Richard001" } };
 	public static final String[][] COMMENT_REGEX = {
 			{
 					CASE_INSENSITIVE

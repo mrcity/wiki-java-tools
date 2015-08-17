@@ -13,69 +13,10 @@ import java.util.regex.Pattern;
 
 import javax.security.auth.login.LoginException;
 
-class CategoryCreator {
-	private HashSet<String> createdCategories;
-	private Wiki wiki;
-
-	/**
-	 * Construct the CategoryCreator and pass in any categories that should be
-	 * considered existing
-	 * 
-	 * @param wiki
-	 *            the wiki where new cateogies should be created
-	 * @param createdCategories
-	 *            the already existing categories
-	 */
-	public CategoryCreator(Wiki wiki, String[] createdCategories) {
-		this.wiki = wiki;
-		if (createdCategories == null)
-			createdCategories = new String[] {};
-		this.createdCategories = new HashSet<String>();
-		for (String cat : createdCategories)
-			try {
-				addCategory(cat, null, false);
-			} catch (Exception e) {
-				// never happens
-				e.printStackTrace();
-				System.exit(-1);
-			}
-	}
-
-	/**
-	 * Check if the given category already exists and create it if not
-	 * 
-	 * @param categoryName
-	 *            the category to check
-	 * @param text
-	 *            the text of the category when created
-	 * @param mayNotExist
-	 *            set this to true! If this is false, NO check is done if the
-	 *            category exists on-wiki
-	 * @throws LoginException
-	 * @throws IOException
-	 *             if a network error occurs
-	 */
-	public void addCategory(String categoryName, String text,
-			boolean mayNotExist) throws LoginException, IOException {
-		categoryName = "Category:"
-				+ categoryName.replaceFirst("^([cC]ategory:)", "");
-		if (createdCategories.add(categoryName) && mayNotExist) {
-			if (!wiki.exists(new String[] { categoryName })[0])
-				wiki.edit(categoryName, text, "Creating category");
-		}
-	}
-}
-
 public class WikiPage {
 	private static final String NO_TOKEN = "true";
 	private static final WikiCategory REVOKED_CATEGORY = new WikiCategory("",
 			null, null);
-	private static final Pattern UPLOADED_BY = Pattern
-			.compile(Commons.CASE_INSENSITIVE
-					+ "uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]]");
-	private static String UPDLOADED_BY_USER_CATEGORY_TEXT = "__HIDDENCAT__"
-			+ "\nThis category contains flickr uploads by [[User:%s]]."
-			+ "\n[[Category:Files by uploader]]";
 
 	private boolean isFile;
 	// private boolean isRedirect; // TODO implementation?
@@ -101,11 +42,12 @@ public class WikiPage {
 	 *            The name of the page with prefix (e.g. "File:", "Category:",
 	 *            ...)
 	 */
-	public WikiPage(Wiki wiki, String name) throws IOException {
+	public WikiPage(Wiki wiki, String name, CategoryCreator catGen)
+			throws IOException {
 		this.isFile = name.split(":", 2)[0].toLowerCase().equals("file");
 		// this.isRedirect = wiki.isRedirect( fname );
 		this.wiki = wiki;
-		this.catGen = new CategoryCreator(wiki, null);
+		this.catGen = catGen;
 		this.name = name;
 		this.editSummary = "";
 		this.setPlainText(wiki.getPageText(name));
@@ -193,17 +135,24 @@ public class WikiPage {
 				cleanText = regexCleaner(textPart, Commons.UPLOADED_BY_REGEX,
 						false);
 				if (!textPart.equals(cleanText)) {
-					Matcher m = UPLOADED_BY.matcher(textPart);
+					Matcher m = Commons.UPLOADED_BY.matcher(textPart);
 					m.find(); // This is always true because
 								// Commons.UPLOADED_BY_REGEX already matched
 					appendToEditSummary("Transforming misleading information into category: \""
 							+ m.group() + "\". ");
 					String userName = firstCharToUpperCase(m.group().split(
-							"User:", 2)[1].split("\\|", 2)[0]);
+							"[Uu]ser:", 2)[1].split("\\|", 2)[0]);
+					// Correct * Uploaded by [[user:name]] -> user:name]]
+					userName = userName.replaceAll("(.*?)\\]\\]", "$1");
 					String userCategory = "Category:Uploaded by user "
 							+ userName;
+					for (String[] regex : Commons.FLICKR_TRACKING_CATEGORY_FLAVOR_REGEX) {
+						userCategory = userCategory.replaceFirst(regex[0],
+								regex[1]);
+					}
 					catGen.addCategory(userCategory, String.format(
-							UPDLOADED_BY_USER_CATEGORY_TEXT, userName), true);
+							Commons.UPDLOADED_BY_USER_CATEGORY_TEXT, userName),
+							true);
 					appendToPlainText += "[[" + userCategory + "]]";
 					textPart = cleanText;
 				}

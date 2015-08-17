@@ -6,11 +6,13 @@ import java.util.logging.Level;
 
 import javax.security.auth.login.LoginException;
 
+import wiki.CategoryCreator;
+import wiki.Commons;
 import wiki.Wiki;
 import wiki.WikiPage;
 
 public class YaCBot {
-	private static final String VERSION = "v15.08.05";
+	private static final String VERSION = "v15.08.17";
 
 	public static void main(String[] args) {
 
@@ -78,6 +80,7 @@ public class YaCBot {
 
 		Object[] nextBatchObjects;
 		String[] nextBatch;
+		WikiPage target = null;
 		continueKey = continueKey.replace(' ', '_');
 		long total = 0;
 		final long startTime = System.currentTimeMillis();
@@ -87,17 +90,20 @@ public class YaCBot {
 		long currentExceptionSleepTime = minExceptionSleepTime;
 		final long maxExceptionSleepTime = 65 * 60;
 
+		final CategoryCreator catGen = new CategoryCreator(wiki,
+				Commons.FLICKR_TRACKING_CATEGORY_OPT_OUT);
+
 		while (currentExceptionSleepTime < maxExceptionSleepTime) {
 			try {
 				nextBatchObjects = wiki.listAllFiles(continueKey, 15);
 				nextBatch = (String[]) nextBatchObjects[1];
-				for (String i : nextBatch) {
-					if (i.contains("/"))
+				for (String p : nextBatch) {
+					if (p.contains("/"))
 						continue;
-					if ((wiki.getPageInfo(i).get("protection")).toString()
+					if ((wiki.getPageInfo(p).get("protection")).toString()
 							.contains("edit=sysop"))
 						continue;
-					WikiPage target = new WikiPage(wiki, i);
+					target = new WikiPage(wiki, p, catGen);
 					target.cleanupWikitext();
 					// Skip when comments exist in the category section. TODO
 					// or when logic templates are used
@@ -159,7 +165,8 @@ public class YaCBot {
 			}
 		}
 		if (currentExceptionSleepTime >= maxExceptionSleepTime)
-			System.out.println("Too many exceptions. Exiting.");
+			System.out.println("Too many exceptions. Exiting with target="
+					+ target.getName());
 		else
 			System.out.println("All batches done. Exiting.");
 	}

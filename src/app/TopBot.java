@@ -243,7 +243,7 @@ class CategoryTree extends Category {
 
 class TopBotThread extends Thread {
 
-	private static final int FADE_OUT = 3 * 7;
+	private static final int FADE_OUT = 365; // days
 	private final Wiki wiki;
 	private final String categoryName;
 	private final Category category;
@@ -343,10 +343,10 @@ class TopBotThread extends Thread {
 
 		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddHHmmss");
 		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		Date twoWeeksFromNow = now.getTime();
-		twoWeeksFromNow.setDate(now.getTime().getDate() + FADE_OUT);
+		Date expire = now.getTime();
+		expire.setDate(now.getTime().getDate() + FADE_OUT);
 		String text = "{{#ifexpr:{{CURRENTTIMESTAMP}}>"
-				+ timestamp.format(twoWeeksFromNow)
+				+ timestamp.format(expire)
 				+ "|{{speedy|Outdated report, which was replaced by "
 				+ "a fresh one through [[user:{{subst:REVISIONUSER}}]].}}|}}"
 				+ "\nLast update: {{subst:#time:d F Y}}." + "\n"
@@ -426,7 +426,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.06.20";
+	public static final String VERSION = "v15.08.20";
 
 	public static void main(String[] args) {
 

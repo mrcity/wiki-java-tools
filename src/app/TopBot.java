@@ -1,7 +1,9 @@
 package app;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -430,9 +432,10 @@ public class TopBot {
 
 	public static void main(String[] args) {
 
-		char[] password = passwordDialog(args);
-		Wiki commons = new Wiki("commons.wikimedia.org");
 		try {
+			char[] password = passwordDialog(args);
+			Wiki commons = new Wiki("commons.wikimedia.org");
+
 			commons.login(args[0], password);
 			password = null;
 
@@ -482,8 +485,9 @@ public class TopBot {
 	 * @param args
 	 *            the command line arguments
 	 * @return the password
+	 * @throws IOException 
 	 */
-	private static char[] passwordDialog(String[] args) {
+	private static char[] passwordDialog(String[] args) throws IOException {
 		System.out.println(VERSION);
 
 		String[] expectedArgs = { "username" };
@@ -498,6 +502,11 @@ public class TopBot {
 			System.exit(-1);
 		}
 		System.out.println("Please type in the password for " + args[0] + ".");
+		if (System.console() == null) {
+			// default to stderr; does NOT echo characters... not sure why
+			return (new BufferedReader(new InputStreamReader(System.in)))
+					.readLine().toCharArray();
+		}
 		return System.console().readPassword();
 	}
 

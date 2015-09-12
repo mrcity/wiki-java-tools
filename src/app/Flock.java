@@ -1,6 +1,8 @@
 package app;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -90,7 +92,7 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.08.17";
+	static final String VERSION = "v15.08.27";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
@@ -102,10 +104,11 @@ public class Flock extends App {
 
 	public static void main(String[] args) {
 
-		char[] password = passwordDialog(args);
-
-		Wiki commons = new Wiki("commons.wikimedia.org");
 		try {
+
+			char[] password = passwordDialog(args);
+			Wiki commons = new Wiki("commons.wikimedia.org");
+
 			commons.login(args[0], password);
 			password = null;
 			// Minimum time between edits in ms
@@ -130,8 +133,10 @@ public class Flock extends App {
 	 * @param args
 	 *            the command line arguments
 	 * @return the password
+	 * @throws IOException
+	 *             If an I/O error occurs
 	 */
-	private static char[] passwordDialog(String[] args) {
+	private static char[] passwordDialog(String[] args) throws IOException {
 
 		System.out.println(VERSION);
 
@@ -147,6 +152,9 @@ public class Flock extends App {
 			System.exit(-1);
 		}
 		System.out.println("Please type in the password for " + args[0] + ".");
+		if (System.console() == null) {
+			return (new BufferedReader(new InputStreamReader(System.in))).readLine().toCharArray();
+		}
 		return System.console().readPassword();
 	}
 

@@ -46,7 +46,7 @@ enum Regex {
 			"LicenseReview"),
 
 	WIKIA(
-			new String[] { (Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/[a-z0-9]*?\\.?wikia\\.com\\/.*") },
+			new String[] { (Flock.REGEX_FLAGS + ".*?https?\\:\\/\\/[a-z0-9]*?\\.?wikia\\.com\\/.*?file.*") },
 			"LicenseReview"),
 
 	VALID_SOURCE_OR_LICENSE(
@@ -90,7 +90,7 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.08.16";
+	static final String VERSION = "v15.08.17";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;

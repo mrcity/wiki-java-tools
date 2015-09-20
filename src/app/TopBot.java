@@ -4,14 +4,10 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.TimeZone;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 
@@ -245,11 +241,11 @@ class CategoryTree extends Category {
 
 class TopBotThread extends Thread {
 
-	private static final int FADE_OUT = 365; // days
 	private final Wiki wiki;
 	private final String categoryName;
 	private final Category category;
 	private final ConcurrentLinkedQueue<String> logger;
+	private String userName;
 
 	/**
 	 * Create a thread which can crawl a category and count each member's global
@@ -261,12 +257,13 @@ class TopBotThread extends Thread {
 	 *            the category to crawl (may or may not start with "Category:")
 	 */
 	public TopBotThread(Wiki wiki, Category category,
-			ConcurrentLinkedQueue<String> logger) {
+			ConcurrentLinkedQueue<String> logger, String userName) {
 		this.wiki = wiki;
 		this.categoryName = category.getName().replaceFirst(
 				"(?i)^" + Category.CATEGORY_PREFIX, "");
 		this.category = category;
 		this.logger = logger;
+		this.userName = userName;
 
 		System.out.println(getInfo(true));
 	}
@@ -343,12 +340,11 @@ class TopBotThread extends Thread {
 			}
 		});
 
-		SimpleDateFormat timestamp = new SimpleDateFormat("yyyyMMddHHmmss");
-		Calendar now = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-		Date expire = now.getTime();
-		expire.setDate(now.getTime().getDate() + FADE_OUT);
-		String text = "{{#ifexpr:{{CURRENTTIMESTAMP}}>"
-				+ timestamp.format(expire)
+		// TODO: replace by {{Special:Editcount/userName}}
+		String editCount = "User:" + userName + "/editCount";
+
+		String text = "{{#ifexpr:{{" + editCount + "}}>" + "{{subst:"
+				+ editCount + "}}"
 				+ "|{{speedy|Outdated report, which was replaced by "
 				+ "a fresh one through [[user:{{subst:REVISIONUSER}}]].}}|}}"
 				+ "\nLast update: {{subst:#time:d F Y}}." + "\n"
@@ -428,7 +424,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.08.20";
+	public static final String VERSION = "v15.09.20";
 
 	public static void main(String[] args) {
 
@@ -457,7 +453,7 @@ public class TopBot {
 			TopBotThread[] threads = new TopBotThread[reportCats.length];
 			for (int j = 0; j < threads.length; j++) {
 				threads[j] = new TopBotThread(commons, reportCats[j],
-						loggerQueue);
+						loggerQueue, args[0]);
 			}
 			Thread.sleep(1000);
 			for (TopBotThread t : threads) {

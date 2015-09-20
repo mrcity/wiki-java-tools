@@ -246,6 +246,7 @@ class TopBotThread extends Thread {
 	private final Category category;
 	private final ConcurrentLinkedQueue<String> logger;
 	private String userName;
+	private int threshold;
 
 	/**
 	 * Create a thread which can crawl a category and count each member's global
@@ -253,17 +254,22 @@ class TopBotThread extends Thread {
 	 * 
 	 * @param wiki
 	 *            the wiki to connect to
+	 * @param threshold
+	 *            should equal twice the total number of reports to be created
 	 * @param category
 	 *            the category to crawl (may or may not start with "Category:")
 	 */
 	public TopBotThread(Wiki wiki, Category category,
-			ConcurrentLinkedQueue<String> logger, String userName) {
+			ConcurrentLinkedQueue<String> logger, String userName,
+			int threshold) {
 		this.wiki = wiki;
-		this.categoryName = category.getName().replaceFirst(
+		this.categoryName = category.getName()
+				.replaceFirst(
 				"(?i)^" + Category.CATEGORY_PREFIX, "");
 		this.category = category;
 		this.logger = logger;
 		this.userName = userName;
+		this.threshold = threshold;
 
 		System.out.println(getInfo(true));
 	}
@@ -343,8 +349,8 @@ class TopBotThread extends Thread {
 		// TODO: replace by {{Special:Editcount/userName}}
 		String editCount = "User:" + userName + "/editCount";
 
-		String text = "{{#ifexpr:{{" + editCount + "}}>" + "{{subst:"
-				+ editCount + "}}"
+		String text = "{{#ifexpr:{{" + editCount + "}}>" + "{{#expr: "
+				+ threshold + "+ {{subst:" + editCount + "}}" + "}}"
 				+ "|{{speedy|Outdated report, which was replaced by "
 				+ "a fresh one through [[user:{{subst:REVISIONUSER}}]].}}|}}"
 				+ "\nLast update: {{subst:#time:d F Y}}." + "\n"
@@ -424,7 +430,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.09.20";
+	public static final String VERSION = "v15.09.21";
 
 	public static void main(String[] args) {
 
@@ -453,7 +459,7 @@ public class TopBot {
 			TopBotThread[] threads = new TopBotThread[reportCats.length];
 			for (int j = 0; j < threads.length; j++) {
 				threads[j] = new TopBotThread(commons, reportCats[j],
-						loggerQueue, args[0]);
+						loggerQueue, args[0], threads.length * 2);
 			}
 			Thread.sleep(1000);
 			for (TopBotThread t : threads) {

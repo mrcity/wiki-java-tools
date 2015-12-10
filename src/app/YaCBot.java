@@ -12,7 +12,7 @@ import wiki.Wiki;
 import wiki.WikiPage;
 
 public class YaCBot {
-	private static final String VERSION = "v15.08.18";
+	private static final String VERSION = "v15.12.08";
 
 	public static void main(String[] args) {
 

@@ -18,9 +18,11 @@ public class Test {
 		commons.setThrottle(1000);
 		commons.login(Credentials.YACBOT_TEST.getUsername(),
 				Credentials.YACBOT_TEST.getPassword());
-		String[] testFileQA = { "File:2004 Yamaha AES 1500 (5848037371).jpg",
-				"File:Test2-giron.svg", "File:TestFileTestImage 02.gif",
-				"File:CSX in the The New River Gorge (4035380395).jpg" };
+		String[] testFileQA = {
+				"File:Alto de Mezkiriz (54616436).jpg",
+				"File:Alexander Island Washington.jpg",
+				"File:Adamawa Turtle-dove (Streptopelia hypopyrrha) in tree from side.jpg",
+				"File:Alex Levac.jpg" };
 
 		WikiPage target;
 		final CategoryCreator catGen = new CategoryCreator(commons,

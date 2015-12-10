@@ -1225,7 +1225,31 @@ public class Wiki implements Serializable
         String line = fetch(url.toString(), "random");
         return parseAttribute(line, "title", 0);
     }
-
+    
+    /**
+     *  Fetches edit and other types of tokens.
+     *  @param type one of "csrf", "patrol", "rollback", "userrights", "watch"
+     *  @return the token
+     *  @throws IOException if a network error occurs
+     *  @since 0.32
+     */
+    public String getToken(String type) throws IOException
+    {
+        // Note: not called in some methods because we can fetch additional
+        // useful information.
+        String content = fetch(query + "meta=tokens&type=" + type, "getToken");
+        String token = parseAttribute(content, type + "token", 0);
+        
+        // this is a good chance to check whether we are still logged in
+        //if (token.equals("\\+"))
+        //{
+        //    log(Level.SEVERE, "emailUser", "Cookies have expired.");
+        //    logout();
+        //    throw new CredentialExpiredException("Cookies have expired.");
+        //}
+        return token;
+    }
+    
     // STATIC MEMBERS
 
     /**
@@ -1346,7 +1370,8 @@ public class Wiki implements Serializable
      *  <li><b>pageid</b>: (Long) the id of the page or -1 if the page does not
      *    exist
      *  <li><b>timestamp</b>: (Calendar) when this method was called
-     *  <li><b>watchtoken</b>: (String) watchlist token or null if logged out
+     *  <li><b>watchtoken</b>: (String) watchlist token or null if logged out.
+     *  <b>DEPRECATED</b>: use getToken() instead.
      *  <li><b>watchers</b>: (Integer) number of watchers, may be restricted
      *  </ul>
      *
@@ -1430,7 +1455,12 @@ public class Wiki implements Serializable
 
                 // watchlist token
                 if (user != null)
+                {
+                    // no longer needed now that watchInternal uses getToken(). Will be
+                    // removed shortly.
                     tempmap.put("watchtoken", parseAttribute(item, "watchtoken", 0));
+                    logger.log(Level.WARNING, "getPageInfo: watchtoken is deprecated and will be removed shortly.");
+                }
 
                 // number of watchers
                 if (item.contains("watchers=\""))
@@ -1987,16 +2017,12 @@ public class Wiki implements Serializable
         if (user == null || !user.isAllowedTo("undelete"))
             throw new CredentialNotFoundException("Cannot undelete: Permission denied");
 
-        // deleted revisions token
-        String delrev = fetch(query + "meta=tokens", "undelete");
-        String drtoken = parseAttribute(delrev, "csrftoken", 0);
-
         StringBuilder out = new StringBuilder("title=");
         out.append(encode(title, true));
         out.append("&reason=");
         out.append(encode(reason, false));
         out.append("&token=");
-        out.append(encode(drtoken, false));
+        out.append(encode(getToken("csrf"), false));
         if (revisions.length != 0)
         {
             out.append("&timestamps=");
@@ -2606,7 +2632,7 @@ public class Wiki implements Serializable
             throw new CredentialNotFoundException("Permission denied: not able to view deleted history");
 
         StringBuilder url = new StringBuilder(query);
-        url.append("list=alldeletedrevisions&adrprop=ids%7Cuser%7Cflags%7Csize%7Ccomment&adrlimit=max");
+        url.append("list=alldeletedrevisions&adrprop=ids%7Cuser%7Cflags%7Csize%7Ccomment%7Ctimestamp&adrlimit=max");
         if (reverse)
             url.append("&adrdir=newer");
         if (start != null)
@@ -2635,7 +2661,7 @@ public class Wiki implements Serializable
             adrcontinue = parseAttribute(response, "adrcontinue", 0);
 
             // parse
-            int x = response.indexOf("<deletedrevs>");
+            int x = response.indexOf("<alldeletedrevisions>");
             if (x < 0) // no deleted history
                 break;
             for (x = response.indexOf("<page ", x); x > 0; x = response.indexOf("<page ", ++x))
@@ -2665,23 +2691,26 @@ public class Wiki implements Serializable
      *
      *  @param prefix a prefix without a namespace specifier, empty string
      *  lists all deleted pages in the namespace.
-     *  @param namespace one (and only one) namespace
+     *  @param namespace one (and only one) namespace -- not ALL_NAMESPACES
      *  @return (see above)
      *  @throws IOException if a network error occurs
      *  @throws CredentialNotFoundException if we cannot view deleted pages
+     *  @throws IllegalArgumentException if namespace == ALL_NAMESPACES
      *  @since 0.31
      */
     public String[] deletedPrefixIndex(String prefix, int namespace) throws IOException, CredentialNotFoundException
     {
-        // this is currently BROKEN
         if (user == null || !user.isAllowedTo("deletedhistory") || !user.isAllowedTo("deletedtext"))
             throw new CredentialNotFoundException("Permission denied: not able to view deleted history or text.");
-
+        
+        // disallow ALL_NAMESPACES, this query is extremely slow and likely to error out.
+        if (namespace == ALL_NAMESPACES)
+            throw new IllegalArgumentException("deletedPrefixIndex: you must choose a namespace.");
+        
         StringBuilder url = new StringBuilder(query);
-        // drdir also reverses sort order for some reason
-        url.append("list=deletedrevs&drlimit=max&drunique=1&drdir=newer&drprefix=");
+        url.append("generator=alldeletedrevisions&gadrdir=newer&gadrgeneratetitles=1&gadrprefix=");
         url.append(encode(prefix, false));
-        url.append("&drnamespace=");
+        url.append("&gadrlimit=max&gadrnamespace=");
         url.append(namespace);
 
         String drcontinue = null;
@@ -2692,8 +2721,8 @@ public class Wiki implements Serializable
             if (drcontinue == null)
                 text = fetch(url.toString(), "deletedPrefixIndex");
             else
-                text = fetch(url.toString() + "&drcontinue=" + encode(drcontinue, false), "deletedPrefixIndex");
-            drcontinue = parseAttribute(text, drcontinue, 0);
+                text = fetch(url.toString() + "&gadrcontinue=" + encode(drcontinue, false), "deletedPrefixIndex");
+            drcontinue = parseAttribute(text, "gadrcontinue", 0);
 
             for (int x = text.indexOf("<page ", 0); x > 0; x = text.indexOf("<page ", ++x))
                 pages.add(parseAttribute(text, "title", x));
@@ -2877,19 +2906,17 @@ public class Wiki implements Serializable
      */
     public synchronized void protect(String page, Map<String, Object> protectionstate, String reason) throws IOException, LoginException
     {
+        throttle();
+        
         if (user == null || !user.isAllowedTo("protect"))
             throw new CredentialNotFoundException("Cannot protect: permission denied.");
-
-        throttle();
-        Map info = getPageInfo(page);
-        String protectToken = (String)info.get("token");
-
+        
         StringBuilder out = new StringBuilder("title=");
         out.append(encode(page, true));
         out.append("&reason=");
         out.append(encode(reason, false));
         out.append("&token=");
-        out.append(encode(protectToken, false));
+        out.append(encode(getToken("csrf"), false));
         // cascade protection
         if (protectionstate.containsKey("cascade"))
             out.append("&cascade=1");
@@ -3178,8 +3205,6 @@ public class Wiki implements Serializable
         if (user == null || !user.isAllowedTo("deleterevision") || !user.isAllowedTo("deletelogentry"))
             throw new CredentialNotFoundException("Permission denied: cannot revision delete.");
 
-        String deltoken = (String)getPageInfo(revisions[0].getPage()).get("token");
-
         StringBuilder out = new StringBuilder("reason=");
         out.append(encode(reason, false));
         out.append("&type=revision"); // FIXME: allow log entry deletion
@@ -3191,7 +3216,7 @@ public class Wiki implements Serializable
         }
         out.append(revisions[revisions.length - 1].getRevid());
         out.append("&token=");
-        out.append(encode(deltoken, false));
+        out.append(encode(getToken("csrf"), false));
         if (user.isAllowedTo("suppressrevision") && suppress != null)
         {
             if (suppress)
@@ -3991,9 +4016,45 @@ public class Wiki implements Serializable
      */
     public String[] allUsers(String start, int number) throws IOException
     {
-        return allUsers(start, number, "");
+        return allUsers(start, number, "", "", "", "");
     }
 
+    /**
+     *  Returns all usernames of users in given group(s)
+     *  @param group a group name. Use pipe-char "|" to separate if several 
+     *  @return (see above)
+     *  @throws IOException if a network error occurs
+     *  @since 0.32
+     */
+    public String[] allUsersInGroup(String group) throws IOException
+    {
+        return allUsers("", -1, "", group, "", "");
+    }
+     
+    /**
+     *  Returns all usernames of users who are not in given group(s)
+     *  @param excludegroup a group name. Use pipe-char "|" to separate if several 
+     *  @return (see above)
+     *  @throws IOException if a network error occurs
+     *  @since 0.32
+     */
+    public String[] allUsersNotInGroup(String excludegroup) throws IOException
+    {
+        return allUsers("", -1, "", "", excludegroup, "");
+    }
+    
+    /**
+     *  Returns all usernames of users who have given right(s)
+     *  @param rights a right name. Use pipe-char "|" to separate if several 
+     *  @return (see above)
+     *  @throws IOException if a network error occurs
+     *  @since 0.32
+     */
+    public String[] allUsersWithRight(String rights) throws IOException
+    {
+        return allUsers("", -1, "", "", "", rights);
+    }
+    
     /**
      *  Returns all usernames with the given prefix.
      *  @param prefix a username prefix (without User:)
@@ -4003,9 +4064,9 @@ public class Wiki implements Serializable
      */
     public String[] allUsersWithPrefix(String prefix) throws IOException
     {
-        return allUsers("", -1, prefix);
+        return allUsers("", -1, prefix, "", "", "");
     }
-
+    
     /**
      *  Gets the specified number of users (as a String) starting at the
      *  given string, in alphabetical order. Equivalent to [[Special:Listusers]].
@@ -4013,12 +4074,15 @@ public class Wiki implements Serializable
      *  @param start the string to start enumeration
      *  @param number the number of users to return
      *  @param prefix list all users with this prefix (overrides start and amount),
-     *  use "" to not specify one
+     *  use "" to not not specify one
+     *  @param group list all users in this group(s). Use pipe-char "|" to separate group names.
+     *  @param excludegroup list all users who are not in this group(s). Use pipe-char "|" to separate group names.
+     *  @param rights list all users with this right(s). Use pipe-char "|" to separate right names.
      *  @return a String[] containing the usernames
      *  @throws IOException if a network error occurs
      *  @since 0.28
      */
-    public String[] allUsers(String start, int number, String prefix) throws IOException
+    public String[] allUsers(String start, int number, String prefix, String group, String excludegroup, String rights) throws IOException
     {
         // sanitise
         StringBuilder url = new StringBuilder(query);
@@ -4026,7 +4090,7 @@ public class Wiki implements Serializable
         String next = "";
         if (prefix.isEmpty())
         {
-            url.append(number > slowmax ? slowmax : number);
+            url.append( ( number > slowmax || number == -1 ) ? slowmax : number);
             next = encode(start, false);
         }
         else
@@ -4035,6 +4099,21 @@ public class Wiki implements Serializable
             url.append("&auprefix=");
             url.append(encode(prefix, true));
         }
+        if (!group.isEmpty())
+        {
+            url.append("&augroup=");
+            url.append(encode(group, false));
+        }
+        if (!excludegroup.isEmpty())
+        {
+            url.append("&auexcludegroup=");
+            url.append(encode(excludegroup, false));
+        }
+        if (!rights.isEmpty())
+        {
+            url.append("&aurights=");
+            url.append(encode(rights, false));
+        }
         List<String> members = new ArrayList<>(6667); // enough for most requests
         do
         {
@@ -4042,7 +4121,11 @@ public class Wiki implements Serializable
             if (!next.isEmpty())
                 temp += ("&aufrom=" + encode(next, false));
             String line = fetch(temp, "allUsers");
-
+            
+            // bail if nonsense groups/rights
+            if (line.contains("Unrecognized values for parameter"))
+                return new String[0];
+            
             // parse
             next = parseAttribute(line, "aufrom", 0);
             for (int w = line.indexOf("<u "); w > 0; w = line.indexOf("<u ", ++w))
@@ -4250,18 +4333,11 @@ public class Wiki implements Serializable
             log(Level.WARNING, "emailUser", "User " + user.getUsername() + " is not emailable");
             return;
         }
-        String token = (String)getPageInfo("User:" + user.getUsername()).get("token");
-        if (token.equals("\\+"))
-        {
-            log(Level.SEVERE, "emailUser", "Cookies have expired.");
-            logout();
-            throw new CredentialExpiredException("Cookies have expired.");
-        }
 
         // post email
         StringBuilder buffer = new StringBuilder(20000);
         buffer.append("token=");
-        buffer.append(encode(token, false));
+        buffer.append(encode(getToken("csrf"), false));
         buffer.append("&target=");
         buffer.append(encode(user.getUsername(), false));
         if (emailme)
@@ -4295,14 +4371,10 @@ public class Wiki implements Serializable
         if (user == null || !user.isA("sysop"))
             throw new CredentialNotFoundException("Cannot unblock: permission denied!");
 
-        // fetch token
-        String temp = fetch(query + "action=query&meta=tokens", "unblock");
-        String token = parseAttribute(temp, "csrftoken", 0);
-
         // send request
         String request = "user=" + encode(blockeduser, false) +
             "&reason=" + encode(reason, false) + "&token=" +
-            encode(token, false);
+            encode(getToken("csrf"), false);
         String response = post(query + "action=unblock", request, "unblock");
 
         // done
@@ -4396,11 +4468,7 @@ public class Wiki implements Serializable
             if (unwatch)
                 request.append("&unwatch=1");
             request.append("&token=");
-
-            // fetch token
-            String temp = fetch(query + "meta=tokens&type=watch", "watchInternal");
-            String watchToken = parseAttribute(temp, "watchtoken", 0);
-            request.append(encode(watchToken, false));
+            request.append(getToken("watch"));
 
             post(apiUrl + "action=watch", request.toString(), state);
         }
@@ -5315,7 +5383,7 @@ public class Wiki implements Serializable
         if (xml.contains("commenthidden")) // oversighted
             details = null;
         else if (type.equals(MOVE_LOG))
-            details = parseAttribute(xml, "new_title", 0); // the new title
+            details = parseAttribute(xml, "target_title", 0); // the new title
         else if (type.equals(BLOCK_LOG) || xml.contains("<block"))
         {
             int a = xml.indexOf("<block") + 7;
@@ -6562,7 +6630,7 @@ public class Wiki implements Serializable
                     int b = line.indexOf("</diff>", a);
                     return decode(line.substring(a, b));
                 }
-                else
+                else 
                     // <diff> tag has no content if there is no diff
                     return null;
             }
@@ -6921,25 +6989,9 @@ public class Wiki implements Serializable
         connection.connect();
         grabCookies(connection);
 
-        // check lag
-        int lag = connection.getHeaderFieldInt("X-Database-Lag", -5);
-        if (lag > maxlag)
-        {
-            try
-            {
-                synchronized(this)
-                {
-                    int time = connection.getHeaderFieldInt("Retry-After", 10);
-                    log(Level.WARNING, caller, "Current database lag " + lag + " s exceeds " + maxlag + " s, waiting " + time + " s.");
-                    Thread.sleep(time * 1000);
-                }
-            }
-            catch (InterruptedException ex)
-            {
-                // nobody cares
-            }
-            return fetch(url, caller); // retry the request
-        }
+        // check lag and retry
+        if (checkLag(connection))
+            fetch(url, caller);
 
         // get the text
         String temp;
@@ -6992,10 +7044,15 @@ public class Wiki implements Serializable
         connection.setConnectTimeout(CONNECTION_CONNECT_TIMEOUT_MSEC);
         connection.setReadTimeout(CONNECTION_READ_TIMEOUT_MSEC);
         connection.connect();
+
         try (OutputStreamWriter out = new OutputStreamWriter(connection.getOutputStream(), "UTF-8"))
         {
             out.write(text);
         }
+        // check lag and retry
+        if (checkLag(connection))
+            post(url, text, caller);
+        
         StringBuilder temp = new StringBuilder(100000);
         try (BufferedReader in = new BufferedReader(new InputStreamReader(
             zipped ? new GZIPInputStream(connection.getInputStream()) : connection.getInputStream(), "UTF-8")))
@@ -7035,9 +7092,9 @@ public class Wiki implements Serializable
         connection.setConnectTimeout(CONNECTION_CONNECT_TIMEOUT_MSEC);
         connection.setReadTimeout(CONNECTION_READ_TIMEOUT_MSEC);
         connection.connect();
-        boundary = "--" + boundary + "\r\n";
-
+        
         // write stuff to a local buffer
+        boundary = "--" + boundary + "\r\n";
         ByteArrayOutputStream bout = new ByteArrayOutputStream();
         try (DataOutputStream out = new DataOutputStream(bout))
         {
@@ -7071,6 +7128,10 @@ public class Wiki implements Serializable
             // write the buffer to the URLConnection
             uout.write(bout.toByteArray());
         }
+        
+        // check lag and retry
+        if (checkLag(connection))
+            multipartPost(url, params, caller);
 
         // done, read the response
         StringBuilder temp = new StringBuilder(100000);
@@ -7086,6 +7147,33 @@ public class Wiki implements Serializable
             }
         }
         return temp.toString();
+    }
+    
+    /**
+     *  Checks for database lag and sleeps if lag > maxlag.
+     *  @param connection the URL connection used in the request
+     *  @return true if there was sufficient database lag.
+     *  @since 0.32
+     */
+    protected synchronized boolean checkLag(URLConnection connection)
+    {
+        // check lag
+        int lag = connection.getHeaderFieldInt("X-Database-Lag", -5);
+        if (lag > maxlag)
+        {
+            try
+            {
+                int time = connection.getHeaderFieldInt("Retry-After", 10);
+                logger.log(Level.WARNING, "Current database lag " + lag + " s exceeds " + maxlag + " s, waiting " + time + " s.");
+                Thread.sleep(time * 1000);
+            }
+            catch (InterruptedException ex)
+            {
+                // nobody cares
+            }
+            return true;
+        }
+        return false;
     }
 
     /**

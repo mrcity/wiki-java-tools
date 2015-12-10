@@ -132,8 +132,11 @@ public class WikiPage {
 					// https://commons.wikimedia.org/wiki/Commons:IntRegex#.7B.7BInformation.7D.7D_fields
 					textPart = cleanText;
 				}
+				// Disable Uploaded_by for now in yacbot
+				/*/
 				cleanText = regexCleaner(textPart, Commons.UPLOADED_BY_REGEX,
 						false);
+				//*/
 				if (!textPart.equals(cleanText)) {
 					Matcher m = Commons.UPLOADED_BY.matcher(textPart);
 					m.find(); // This is always true because

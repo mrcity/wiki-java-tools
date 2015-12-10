@@ -1,3 +1,23 @@
+/**
+ *  @(#)WikiUnitTest.java 0.31 29/08/2015
+ *  Copyright (C) 2014-2015 MER-C
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License
+ *  as published by the Free Software Foundation; either version 3
+ *  of the License, or (at your option) any later version. Additionally
+ *  this file is subject to the "Classpath" exception.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software Foundation,
+ *  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ */
+
 package org.wikipedia;
 
 import java.io.File;
@@ -58,7 +78,7 @@ public class WikiUnitTest
     @Test
     public void userExists() throws Exception
     {
-        assertTrue(":I should exist!", enWiki.userExists("MER-C"));
+        assertTrue("I should exist!", enWiki.userExists("MER-C"));
         assertFalse("Anon should not exist", enWiki.userExists("127.0.0.1"));
     }
     
@@ -140,6 +160,24 @@ public class WikiUnitTest
     {
         assertArrayEquals("getPageHistory: non-existent page", new Wiki.Revision[0], enWiki.getPageHistory("EOTkd&ssdf"));
         assertArrayEquals("getPageHistory: special page", new Wiki.Revision[0], enWiki.getPageHistory("Special:Specialpages"));
+    }
+    
+    @Test
+    public void getPageInfo() throws Exception
+    {
+        Map<String, Object>[] pageinfo = enWiki.getPageInfo(new String[] { "Main Page", "IPod" });
+        
+        // Main Page
+        Map<String, Object> protection = (Map<String, Object>)pageinfo[0].get("protection");
+        assertEquals("getPageInfo: Main Page edit protection level", Wiki.FULL_PROTECTION, protection.get("edit"));
+        assertNull("getPageInfo: Main Page edit protection expiry", protection.get("editexpiry"));
+        assertEquals("getPageInfo: Main Page move protection level", Wiki.FULL_PROTECTION, protection.get("move"));
+        assertNull("getPageInfo: Main Page move protection expiry", protection.get("moveexpiry"));
+        assertTrue("getPageInfo: Main Page cascade protection", (Boolean)protection.get("cascade"));
+        assertEquals("getPageInfo: Main Page display title", "Main Page", pageinfo[0].get("displaytitle"));
+        
+        // different display title
+        assertEquals("getPageInfo: iPod display title", "iPod", pageinfo[1].get("displaytitle"));
     }
     
     @Test
@@ -285,6 +323,18 @@ public class WikiUnitTest
         text = testWiki.getPageText("User:MER-C/UnitTests/pagetext");
         assertEquals("page text: decoding", text, "&#039;&#039;italic&#039;&#039;" +
             "\n'''&amp;'''\n&&\n&lt;&gt;\n<>\n&quot;\n");
+    }
+    
+    @Test
+    public void allUsersInGroup() throws Exception
+    {
+        assertArrayEquals("allUsersInGroup: nonsense", new String[0], testWiki.allUsersInGroup("sdfkd|&"));
+    }
+    
+    @Test
+    public void allUserswithRight() throws Exception
+    {
+        assertArrayEquals("allUsersWithRight: nonsense", new String[0], testWiki.allUsersWithRight("sdfkd|&"));
     }
     
     @Test

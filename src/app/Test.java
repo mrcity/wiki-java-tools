@@ -16,8 +16,11 @@ public class Test {
 
 		Wiki commons = new Wiki("commons.wikimedia.org");
 		commons.setThrottle(1000);
-		commons.login(Credentials.YACBOT_TEST.getUsername(),
-				Credentials.YACBOT_TEST.getPassword());
+		commons.login(
+				// Credentials.YACBOT_TEST.getUsername()
+				"",
+				// Credentials.YACBOT_TEST.getPassword()
+				"");
 		String[] testFileQA = {
 				"File:Alto de Mezkiriz (54616436).jpg",
 				"File:Alexander Island Washington.jpg",

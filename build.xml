@@ -10,7 +10,7 @@
 	<target name="yacbot_jar" depends="compile">
 		<jar destfile="yacbot.jar" filesetmanifest="mergewithoutmain">
 			<manifest>
-				<attribute name="Main-Class" value="app.App" />
+				<attribute name="Main-Class" value="app.YaCBot" />
 				<attribute name="Class-Path" value="." />
 			</manifest>
 			<fileset dir="${dir.build}" />

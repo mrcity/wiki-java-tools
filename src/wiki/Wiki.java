@@ -2059,17 +2059,6 @@ public class Wiki implements Serializable
         if (user == null || !user.isAllowedTo("undelete"))
             throw new CredentialNotFoundException("Cannot undelete: Permission denied");
 
-<<<<<<< HEAD
-        // deleted revisions token
-        String titleenc = encode(title, true);
-        String delrev = query + "action=query&list=deletedrevs&drlimit=1&drprop=token&titles=" + titleenc;
-        if (!delrev.contains("token=\"")) // nothing to undelete
-        {
-            log(Level.WARNING, "undelete", "Page \"" + title + "\" has no deleted revisions!");
-            return;
-        }
-        String drtoken = parseAttribute(delrev, "token", 0);
-
         StringBuilder out = new StringBuilder("title=");
         out.append(encode(title, true));
         out.append("&reason=");
@@ -2168,17 +2157,6 @@ public class Wiki implements Serializable
                 images.add(parseAttribute(line, "title", a));
         }
         while (imcontinue != null);
-
-        do
-        {
-            line = fetch(continueKey == null ? url : url + "&imcontinue=" + continueKey, "getImagesOnPage");
-
-            // xml form: <im ns="6" title="File:Example.jpg" />
-            for (int a = line.indexOf("<im "); a > 0; a = line.indexOf("<im ", ++a))
-                images.add(parseAttribute(line, "title", a));
-            continueKey = parseAttribute(line, "imcontinue", 0);
-        }
-        while (line.contains("<query-continue>"));
 
         log(Level.INFO, "getImagesOnPage", "Successfully retrieved images used on " + title + " (" + images.size() + " images)");
         return images.toArray(new String[images.size()]);
@@ -2907,7 +2885,6 @@ public class Wiki implements Serializable
             throw new IllegalArgumentException("deletedPrefixIndex: you must choose a namespace.");
         
         StringBuilder url = new StringBuilder(query);
-        // drdir also reverses sort order for some reason
         url.append("generator=alldeletedrevisions&gadrdir=newer&gadrgeneratetitles=1&gadrprefix=");
         url.append(encode(prefix, false));
         url.append("&gadrlimit=max&gadrnamespace=");
@@ -7644,24 +7621,6 @@ public class Wiki implements Serializable
         //     statement of if above, removing else
         // }
         return ret.toArray(new String[ret.size()]);
-    }
-
-    /**
-     * UTF-8 encode the String with URLEncoder after optional normalization;
-     * Usually, normalize should be set to true when a title or name String is
-     * passed in as an argument of a method.
-     * 
-     * @param text the text to encode
-     * @param normalize if the text should be normalized first
-     * @return the encoded text
-     * @throws IOException if a network error occurs during initialization of the namespaces
-     */
-    private String encode(String text, boolean normalize) throws IOException
-    {
-        final String encoding = "UTF-8";
-        if (normalize)
-            text = normalize(text);
-        return URLEncoder.encode(text, encoding);
     }
 
     /**

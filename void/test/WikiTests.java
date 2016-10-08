@@ -1,6 +1,6 @@
 /**
  *  @(#)WikiTests.java
- *  Copyright (C) 2011 - 2014 MER-C
+ *  Copyright (C) 2011 - 2016 MER-C
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public License
@@ -132,10 +132,6 @@ public class WikiTests
         for (Wiki.LogEntry entry : enWiki.getUploads(user4))
             System.out.println(entry);
 
-        // ipblocklist
-        for (Wiki.LogEntry entry : enWiki.getIPBlockList("Alice"))
-            System.out.println(entry);
-
         // search
         for(String[] result : enWiki.search("WikiProject Spam zola enterprises", Wiki.PROJECT_TALK_NAMESPACE))
             System.out.println(Arrays.toString(result));
@@ -228,6 +224,31 @@ public class WikiTests
             System.out.println(cat);
         for (String s : testWiki.getCategoryMembers("A", true))
             System.out.println(s);
+        
+        // all users with group
+        for (String checkuser : enWiki.allUsersInGroup("checkuser"))
+            System.out.println(checkuser);
+        // all users with right
+        for (String oversight : enWiki.allUsersWithRight("hideuser"))
+            System.out.println(oversight);
+        
+        // range contribs
+        for (Wiki.Revision rev : enWiki.rangeContribs("127.0.0.0/8"))
+            System.out.println(rev);
+        for (Wiki.Revision rev : enWiki.rangeContribs("2804:14C:7588:2C4:E99A:3300::/88"))
+            System.out.println(rev);
+        for (Wiki.Revision rev : enWiki.rangeContribs("::/96"))
+            System.out.println(rev);
+                
         */
+        
+        String[] pages = { "Main Page", "Test", "Wikipedia:Articles for deletion/Log/2016 September 24" };
+        List<String>[] templates = enWiki.getTemplates(pages);
+        for (int i = 0; i < templates.length; i++)
+        {
+            System.out.println(pages[i] + ": ");
+            System.out.println(templates[i]);
+        }
+        
     }
 }

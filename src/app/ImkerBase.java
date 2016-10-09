@@ -45,19 +45,20 @@ interface StatusHandler {
 }
 
 public abstract class ImkerBase extends App {
-	protected static final String VERSION = "v16.09.09";
+	protected static final String VERSION = "v16.09.10";
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String FILE_PREFIX = "File:";
 	private static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
 			">", "[", "]", "|" };
 	private static final String[] INVALID_WINDOWS_CHARS = { "?", "\"", "*" };
+	private static final String FOLDER_WINDOWS_ENCODED_FILES = "invalid_names_encoded";
 	private Wiki wiki;
 	private File outputFolder;
 	// Variables only valid for one round; Need invalidation {
 	private String[] fileNames;
 	private FileStatus[] fileStatuses;
-	private boolean windowsCharacterBug = false;
+	private boolean windowsEncodeSubfolder = false;
 	// }
 	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
 			"i18n/Bundle", Locale.getDefault());
@@ -150,12 +151,26 @@ public abstract class ImkerBase extends App {
 		if (!System.getProperty("os.name").startsWith("Windows"))
 			return false;
 		for (String filename : fileNames) {
-			for (String invalidChar : INVALID_WINDOWS_CHARS)
-				if (filename.contains(invalidChar)) {
-					windowsCharacterBug = true;
-					return true;
-				}
+			if (checkWindowsBug(filename)) {
+				windowsEncodeSubfolder = true;
+				return true;
+			}
 		}
+		return false;
+	}
+
+	/**
+	 * Returns true if there are invalid Windows characters in at least one file
+	 * name and the operating system is windows
+	 *
+	 * @param fileName
+	 * @return if affected by the "windows bug"
+	 */
+	protected boolean checkWindowsBug(String fileName) {
+		for (String invalidChar : INVALID_WINDOWS_CHARS)
+			if (fileName.contains(invalidChar)) {
+				return true;
+			}
 		return false;
 	}
 
@@ -209,10 +224,10 @@ public abstract class ImkerBase extends App {
 	 * @return the resulting file name
 	 */
 	private String windowsNormalize(String fileName) {
-		if (windowsCharacterBug)
+		if (windowsEncodeSubfolder && checkWindowsBug(fileName))
 			try {
-				fileName = URLEncoder.encode(fileName, "UTF-8").replace("*",
-						"%2A");
+				fileName = FOLDER_WINDOWS_ENCODED_FILES + File.separator
+						+ URLEncoder.encode(fileName, "UTF-8").replace("*", "%2A");
 			} catch (UnsupportedEncodingException e) {
 				// never happens
 				e.printStackTrace();
@@ -317,7 +332,7 @@ public abstract class ImkerBase extends App {
 	protected void resetMemory() {
 		setFileNames(null);
 		setFileStatuses(null);
-		windowsCharacterBug = false;
+		windowsEncodeSubfolder = false;
 	}
 
 	/**

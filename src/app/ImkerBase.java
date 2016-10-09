@@ -109,6 +109,9 @@ public abstract class ImkerBase extends App {
 	 */
 	protected void downloadLoop(StatusHandler sh) throws IOException,
 			LoginException {
+		if (windowsEncodeSubfolder)
+			new File(outputFolder.getPath() + File.separator + FOLDER_WINDOWS_ENCODED_FILES).mkdir();
+
 		for (int i = 0; i < fileNames.length; i++) {
 			final String fileName = fileNames[i]
 					.substring(FILE_PREFIX.length());

@@ -8,6 +8,7 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.Dialog.ModalityType;
+import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
@@ -21,6 +22,8 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.file.Files;
@@ -44,6 +47,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
+import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
@@ -167,18 +171,32 @@ public class ImkerGUI extends ImkerBase {
 
 		e.printStackTrace();
 
-		String title = "[Imker] Exception";
+		String details = "Version: " + VERSION + "\n"
+				+ "Stack trace:" + "\n"
+				+ "```java" + "\n"
+				+ "%s" + "\n"
+				+ "```" + "\n";
+		StringWriter sw = new StringWriter();
+		e.printStackTrace(new PrintWriter(sw));
+		details = String.format(details, sw.toString());
+		String paramTitle = "[Imker] Exception";
+		String paramDetails = null;
 		try {
-			title = URLEncoder.encode(title, "UTF-8");
+			paramTitle = URLEncoder.encode(paramTitle, "UTF-8");
+			paramDetails = URLEncoder.encode(details, "UTF-8");
 		} catch (UnsupportedEncodingException ignore) {
 		}
 		JTextArea ep = new JTextArea(e.toString() + "\n"
 				+ MSGS.getString("Hint_Github_Issue") + "\n"
-				+ String.format(GITHUB_ISSUE_TRACKER, title, ""));
+				+ String.format(GITHUB_ISSUE_TRACKER, paramTitle, paramDetails) + "\n"
+				+ "And include the following details:\n"
+				+ details);
 		ep.setEditable(false);
 		ep.setFocusable(true);
 
-		JOptionPane.showMessageDialog(FRAME, ep,
+		JScrollPane msgScrollable = new JScrollPane(ep);
+		msgScrollable.setPreferredSize(new Dimension(500, 400));
+		JOptionPane.showMessageDialog(FRAME, msgScrollable,
 				MSGS.getString("Status_Exception_Caught"),
 				JOptionPane.ERROR_MESSAGE);
 		STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Exception_Caught"));

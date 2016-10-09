@@ -91,7 +91,7 @@ public class ImkerGUI extends ImkerBase {
 				download();
 				verifyCheckSum();
 				state = State.TERMINATED;
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				terminate(e);
 				return;
 			}
@@ -134,7 +134,7 @@ public class ImkerGUI extends ImkerBase {
 							return null;
 						}
 					});
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			terminate(e);
 			return;
 		}
@@ -161,9 +161,9 @@ public class ImkerGUI extends ImkerBase {
 	 * with the exception
 	 * 
 	 * @param e
-	 *            the exception that occurred
+	 *            the exception or error that occurred
 	 */
-	private void terminate(Exception e) {
+	private void terminate(Throwable e) {
 
 		e.printStackTrace();
 
@@ -201,12 +201,12 @@ public class ImkerGUI extends ImkerBase {
 	 *            the exit button label
 	 * @param worker
 	 *            the worker
-	 * @throws Exception
-	 *             if an IO issue occurs during task execution
+	 * @throws Throwable
+	 *             if some sort of issue occurs during task execution
 	 */
 	private void executeWorker(String dialogTitle, String infoText,
 			JProgressBar progressBar, String exitButton,
-			final SwingWorker<Void, Void> worker) throws Exception {
+			final SwingWorker<Void, Void> worker) throws Throwable {
 
 		final JDialog modalDialog = new JDialog(FRAME, dialogTitle + " - "
 				+ PROGRAM_NAME, ModalityType.APPLICATION_MODAL);
@@ -265,8 +265,7 @@ public class ImkerGUI extends ImkerBase {
 		try {
 			worker.get();
 		} catch (ExecutionException e) {
-			IOException ioe = (IOException) e.getCause();
-			throw ioe;
+			throw e.getCause();
 		} catch (InterruptedException e) {
 			// should not happen
 			e.printStackTrace();
@@ -320,10 +319,9 @@ public class ImkerGUI extends ImkerBase {
 
 	/**
 	 * Try to download while blocking the UI with a modal dialog
-	 * 
-	 * @throws Exception
+	 * @throws Throwable
 	 */
-	private void download() throws Exception {
+	private void download() throws Throwable {
 		final JProgressBar progressBarDownload = new JProgressBar(0,
 				getFileNames().length);
 		progressBarDownload.setStringPainted(true);
@@ -363,10 +361,9 @@ public class ImkerGUI extends ImkerBase {
 
 	/**
 	 * Try to verify the checksums while blocking the UI with a modal dialog
-	 * 
-	 * @throws Exception
+	 * @throws Throwable
 	 */
-	private void verifyCheckSum() throws Exception {
+	private void verifyCheckSum() throws Throwable {
 		final int errors[] = new int[1];
 		final JProgressBar progressBarChecksum = new JProgressBar(0,
 				getFileStatuses().length);

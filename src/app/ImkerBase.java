@@ -61,6 +61,9 @@ public abstract class ImkerBase extends App {
 	private FileStatus[] fileStatuses;
 	private boolean windowsEncodeSubfolder = false;
 	// }
+	// Preferences {
+	protected static final String PREF_WIKI_DOMAIN_DEFAULT = "commons.wikimedia.org";
+	// }
 	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
 			RESOURCE_BUNDLE_BASE_NAME, Locale.getDefault());
 

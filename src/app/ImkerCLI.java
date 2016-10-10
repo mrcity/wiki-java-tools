@@ -1,5 +1,9 @@
 package app;
 
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.Parameters;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -9,11 +13,31 @@ import javax.security.auth.login.LoginException;
 
 import wiki.Wiki;
 
+@Parameters(separators = "=", resourceBundle = ImkerBase.RESOURCE_BUNDLE_BASE_NAME)
+class Preferences {
+	protected final String NAME_CATEGORY = "--category";
+	@Parameter(names = { NAME_CATEGORY, "-c" }, descriptionKey = "Description_Category")
+	protected String category = null;
+
+	protected final String NAME_PAGE = "--page";
+	@Parameter(names = { NAME_PAGE, "-p" }, descriptionKey = "Description_Page")
+	protected String page = null;
+
+	protected final String NAME_FILE = "--file";
+	@Parameter(names = { NAME_FILE, "-f" }, descriptionKey = "Description_File")
+	protected String file = null;
+
+	@Parameter(names = { "--outfolder", "-o" }, descriptionKey = "Description_Output_Folder", required = true)
+	protected String outfolder = null;
+
+	@Parameter(names = { "--help", "-?", "-h" }, hidden = true, help = true)
+	protected boolean help = false;
+
+	@Parameter(names = { "--domain", "-d" }, descriptionKey = "Description_Wiki_Domain")
+	protected String wikiDomain = ImkerBase.PREF_WIKI_DOMAIN_DEFAULT;
+}
+
 public class ImkerCLI extends ImkerBase {
-	private final String CATEGORY_PARAM = "-category=";
-	private final String PAGE_PARAM = "-page=";
-	private final String FILE_PARAM = "-file=";
-	private final String OUT_PARAM = "-outfolder=";
 	private final StatusHandler stdOutPrint = new StatusHandler() {
 
 		@Override
@@ -37,12 +61,8 @@ public class ImkerCLI extends ImkerBase {
 		System.out.println(MSGS.getString("Description_Program"));
 		System.out.println(VERSION);
 		System.out.println();
-		cli.printHelp(args);
 
-		cli.setWiki("commons.wikimedia.org");
-
-		cli.setFolder(args[1]);
-		cli.setFilenames(args[0]);
+		cli.readAndSetArgs(args, cli);
 
 		cli.solveWindowsBug();
 		cli.download();
@@ -87,6 +107,36 @@ public class ImkerCLI extends ImkerBase {
 
 		System.out.println(MSGS.getString("Status_Checksum_Deleted"));
 		System.out.println(MSGS.getString("Status_Restart_Needed"));
+	}
+
+	/**
+	 * Read the command line arguments and try to set options and preferences.
+	 * 
+	 * @throws IOException
+	 *             if an IO issue occurs (network or file related)
+	 * @throws LoginException
+	 */
+	protected void readAndSetArgs(String[] args, ImkerCLI cli) throws LoginException, IOException {
+		Preferences prefs = new Preferences();
+		JCommander jc = new JCommander(prefs, args);
+		jc.setProgramName("java -jar imker-cli.jar");
+
+		if (prefs.help) {
+			printHelp(jc, prefs);
+			System.exit(0);
+		}
+
+		// Optional Args {
+		cli.setWiki(prefs.wikiDomain);
+		// }
+
+		// Required Args {
+		cli.setFolder(prefs.outfolder);
+		if (!cli.setFilenames(prefs.category, prefs.page, prefs.file)) {
+			printHelp(jc, prefs);
+			System.exit(-1);
+		}
+		// }
 	}
 
 	/**
@@ -143,25 +193,15 @@ public class ImkerCLI extends ImkerBase {
 	 * Parse the given path parameter from the command line or exit if no such
 	 * directory is found
 	 * 
-	 * @param pathArg
-	 *            the command line parameter
+	 * @param folder
+	 *            the folder read from the command line
 	 */
-	private void setFolder(String pathArg) {
-
-		int pathIndex = pathArg.indexOf(OUT_PARAM);
-
-		if (pathIndex < 0)
-			// exit and warn user
-			printHelp(null);
-
-		pathIndex += OUT_PARAM.length();
-		String path = pathArg.substring(pathIndex);
+	private void setFolder(String path) {
 		File folder = new File(path);
 		if (folder.isDirectory()) {
 			setOutputFolder(folder);
 		} else {
-			System.out.println(MSGS.getString("Status_Not_A_Folder") + " "
-					+ path);
+			System.out.println(MSGS.getString("Status_Not_A_Folder") + " " + path);
 			System.exit(-1);
 		}
 	}
@@ -170,47 +210,38 @@ public class ImkerCLI extends ImkerBase {
 	 * Search for a category, a page or a file in the given parameter in this
 	 * order or exit if none was found
 	 * 
-	 * @param inputArg
-	 *            the command line parameter
+	 * @param category
+	 * @param file
+	 * @param page
 	 * @throws FileNotFoundException
 	 *             if the file parameter points to a missing file
 	 * @throws IOException
 	 *             if a IO issue occurs (network or file related)
 	 * @throws LoginException
 	 */
-	private void setFilenames(String inputArg) throws FileNotFoundException,
-			IOException, LoginException {
+	private boolean setFilenames(final String category, String page, String file)
+			throws FileNotFoundException, IOException, LoginException {
 
-		int catIndex = inputArg.indexOf(CATEGORY_PARAM);
-		int pageIndex = inputArg.indexOf(PAGE_PARAM);
-		int fileIndex = inputArg.indexOf(FILE_PARAM);
-
-		final String arg;
 		String[] fnames = null;
-		if (catIndex > 0) {
-			arg = inputArg.substring(catIndex + CATEGORY_PARAM.length());
+		if (category != null) {
 			fnames = (String[]) attemptFetch(new WikiAPI() {
 
 				@Override
 				public String[] fetch() throws IOException {
 					boolean subcat = false; // TODO: add argument --subcat
-					return getWiki().getCategoryMembers(arg, subcat,
-							Wiki.FILE_NAMESPACE);
+					return getWiki().getCategoryMembers(category, subcat, Wiki.FILE_NAMESPACE);
 				}
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-		} else if (pageIndex > 0) {
-			arg = inputArg.substring(pageIndex + PAGE_PARAM.length());
-			fnames = getImagesOnPage(arg, true);
-		} else if (fileIndex > 0) {
-			arg = inputArg.substring(fileIndex + FILE_PARAM.length());
-			fnames = readFileNames(arg);
+		} else if (page != null) {
+			fnames = getImagesOnPage(page, true);
+		} else if (file != null) {
+			fnames = readFileNames(file);
 		} else {
-			// exit and warn user
-			printHelp(null);
-			System.exit(-1);
+			return false;
 		}
 		setFileStatuses(new FileStatus[fnames.length]);
 		setFileNames(fnames);
+		return true;
 	}
 
 	/**
@@ -239,35 +270,22 @@ public class ImkerCLI extends ImkerBase {
 	}
 
 	/**
-	 * Verify input parameters; Print help message and exit if invalid arguments
-	 * were given
-	 * 
-	 * @param args
-	 *            the command line arguments or null
+	 * Print help message
 	 */
-	private void printHelp(String[] args) {
+	private void printHelp(JCommander jc, Preferences prefs) {
+		jc.usage();
+		System.out.println(MSGS.getString("Description_Download_Source"));
 
-		String[] expectedArgs = { MSGS.getString("CLI_Arg_Src"),
-				MSGS.getString("CLI_Arg_Output") };
-		String[] expectedArgsDescription = {
-				MSGS.getString("Description_Download_Src") + "\n    "
-						+ MSGS.getString("Text_Examples") + "\n     -"
-						+ CATEGORY_PARAM + "\"Denver, Colorado\"" + "\n     -"
-						+ PAGE_PARAM + "\"Sandboarding\"" + "\n     -"
-						+ FILE_PARAM + "\"Documents/files.txt\" ("
-						+ MSGS.getString("Hint_File_Syntax") + ")",
-				MSGS.getString("Description_Target_Folder") + "\n    "
-						+ MSGS.getString("Text_Example") + "\n     -"
-						+ OUT_PARAM + "\"user/downloads\"" };
-		if (args == null || args.length != expectedArgs.length) {
-			System.out.print(MSGS.getString("Text_Usage")
-					+ " java -jar filename.jar");
-			for (String i : expectedArgs)
-				System.out.print(" [" + i + "]");
-			System.out.println("");
-			for (String i : expectedArgsDescription)
-				System.out.println(" \u21B3 " + i); // \u21B3 is unicode for ↳
-			System.exit(-1);
-		}
+		// \u21B3 is unicode for ↳
+		System.out.println(String.format(" \u21B3 %s; %s",
+				MSGS.getString("Text_Wiki_Cat"),
+				MSGS.getString("Text_Example") + " " + prefs.NAME_CATEGORY + "=\"Denver, Colorado\""));
+		System.out.println(String.format(" \u21B3 %s; %s",
+				MSGS.getString("Text_Wiki_Page"),
+				MSGS.getString("Text_Example") + " " + prefs.NAME_PAGE + "=\"Sandboarding\""));
+		System.out.println(String.format(" \u21B3 %s; %s (%s)",
+				MSGS.getString("Text_Local_File"),
+				MSGS.getString("Text_Example") + " " + prefs.NAME_FILE + "=\"Documents" + File.separator + "files.txt\"",
+				MSGS.getString("Hint_File_Syntax")));
 	}
 }

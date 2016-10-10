@@ -2,6 +2,7 @@ package app;
 
 import java.awt.BorderLayout;
 import java.awt.Button;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.FlowLayout;
@@ -31,6 +32,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.prefs.Preferences;
 
 import javax.security.auth.login.LoginException;
 import javax.swing.BorderFactory;
@@ -54,6 +56,8 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import wiki.Wiki;
 
@@ -88,10 +92,10 @@ public class ImkerGUI extends ImkerBase {
 		switch (state) {
 		case PRE_INIT:
 			initialize();
+			solveWindowsBug();
 			break;
 		case PRE_DOWNLOAD:
 			try {
-				solveWindowsBug();
 				download();
 				verifyCheckSum();
 				state = State.TERMINATED;
@@ -780,24 +784,86 @@ public class ImkerGUI extends ImkerBase {
 	 *            the GUI container
 	 */
 	private void addHeader(Container boxPane) {
-		Container logo = new Container();
-		logo.setLayout(new BoxLayout(logo, BoxLayout.X_AXIS));
+		Container header = new Container();
+		header.setLayout(new BoxLayout(header, BoxLayout.X_AXIS));
 
-		logo.add(new JLabel(new ImageIcon(ImkerGUI.class
-				.getResource("/pics/logo-60.png"))));
+		header.add(new JLabel(new ImageIcon(ImkerGUI.class.getResource("/pics/logo-60.png"))));
 
-		logo.add(Box.createHorizontalStrut(4 * GAP));
+		header.add(Box.createHorizontalStrut(4 * GAP));
 
 		JLabel versionLabel = new JLabel(VERSION);
 		versionLabel.setFont(versionLabel.getFont().deriveFont(Font.PLAIN));
 		versionLabel.setAlignmentY(0);
-		logo.add(versionLabel);
-		boxPane.add(logo);
+		header.add(versionLabel);
+
+		header.add(Box.createHorizontalStrut(4 * GAP));
+
+		JButton preferencesLabel = new JButton("\u2699" // \u2699 is unicode for ⚙
+				+ " " + MSGS.getString("Text_Preferences"));
+		preferencesLabel.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				popupPreferences();
+			}
+		});
+		header.add(preferencesLabel);
+
+		boxPane.add(header);
 
 		Container description = new Container();
 		description.setLayout(new FlowLayout(FlowLayout.CENTER, GAP, GAP));
 		description.add(new JLabel(MSGS.getString("Description_Program")));
 		boxPane.add(description);
+	}
+
+	private void popupPreferences() {
+		final String PREFS_NODE_PATH = "imker/gui";
+		final String KEY_WIKI_DOMAIN = "KEY_WIKI_DOMAIN";
+
+		final Preferences prefs = Preferences.userRoot().node(PREFS_NODE_PATH);
+
+		JPanel wikiDomain = new JPanel(new FlowLayout());
+		{
+			final JTextField wikiDomainField = new JTextField(
+					prefs.get(KEY_WIKI_DOMAIN, ImkerBase.PREF_WIKI_DOMAIN_DEFAULT));
+			JTextArea wikiDomainText = new JTextArea(MSGS.getString("Description_Wiki_Domain") + ":");
+			wikiDomainText.setEditable(false);
+			wikiDomainText.setFocusable(false);
+			wikiDomainText.setBackground(new Color(0, 0, 0, 0));
+			wikiDomain.add(wikiDomainText);
+			wikiDomain.add(wikiDomainField);
+			wikiDomainField.getDocument().addDocumentListener(new DocumentListener() {
+				@Override
+				public void removeUpdate(DocumentEvent e) {
+					changedUpdate(e);
+				}
+
+				@Override
+				public void insertUpdate(DocumentEvent e) {
+					changedUpdate(e);
+				}
+
+				@Override
+				public void changedUpdate(DocumentEvent e) {
+					String wd = wikiDomainField.getText();
+					prefs.put(KEY_WIKI_DOMAIN, wd);
+					setWiki(wd);
+				}
+			});
+		}
+		JPanel prefsPanel = new JPanel();
+		prefsPanel.setLayout(new BoxLayout(prefsPanel, BoxLayout.Y_AXIS));
+		prefsPanel.add(Box.createVerticalStrut(GAP));
+		prefsPanel.add(wikiDomain);
+		prefsPanel.add(Box.createVerticalStrut(GAP));
+
+		final JDialog modalDialog = new JDialog(FRAME, MSGS.getString("Text_Preferences") + " - " + PROGRAM_NAME,
+				ModalityType.APPLICATION_MODAL);
+		modalDialog.add(prefsPanel);
+		modalDialog.pack();
+		modalDialog.setMinimumSize(modalDialog.getSize());
+		modalDialog.setLocationRelativeTo(FRAME);
+		modalDialog.setVisible(true);
 	}
 
 	/**
@@ -806,7 +872,7 @@ public class ImkerGUI extends ImkerBase {
 	private void createAndShowGUI() {
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		} catch (Exception e) {
+		} catch (Exception ignore) {
 			// who cares?
 		}
 		FRAME.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -827,7 +893,7 @@ public class ImkerGUI extends ImkerBase {
 		Container boxPane = new JPanel();
 		boxPane.setLayout(new BoxLayout(boxPane, BoxLayout.Y_AXIS));
 
-		// LOGO + version + description
+		// LOGO + version + description + preferences
 		addHeader(boxPane);
 
 		// input -- output
@@ -849,13 +915,12 @@ public class ImkerGUI extends ImkerBase {
 
 		FRAME.pack();
 		FRAME.setVisible(true);
+		FRAME.setMinimumSize(FRAME.getSize());
 	}
 
 	public static void main(String[] args) {
 
 		final ImkerGUI gui = new ImkerGUI();
-
-		gui.setWiki("commons.wikimedia.org");
 
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
 			public void run() {

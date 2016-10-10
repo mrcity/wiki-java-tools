@@ -6,11 +6,24 @@ def dir_libs = "libs"
 def dir_dist = "distrib"
 def dir_launch4j = "launch4j"
 
-task compile << {
+apply plugin:'java'
+repositories {
+    mavenCentral()
+}
+dependencies {
+    compile "com.beust:jcommander:1.48"
+}
+
+task copy_deps_for_ant(type: Copy) {
+    from configurations.compile
+    into dir_libs
+}
+
+task compile(dependsOn: copy_deps_for_ant) << {
     delete dir_build
     mkdir dir_build
 
-    ant.javac(srcdir: dir_src, destdir: dir_build)
+    ant.javac(srcdir: dir_src, classpath: dir_libs + "/jcommander-1.48.jar", destdir: dir_build)
 
     ant.copydir(src: dir_src + "/pics", dest: dir_build + "/pics")
     ant.copydir(src: dir_src + "/i18n", dest: dir_build + "/i18n")
@@ -32,6 +45,7 @@ task imker_cli_jar(dependsOn: compile) << {
       delegate.attribute(name: "Main-Class", value: "app.ImkerCLI")
       delegate.attribute(name: "Class-Path", value: ".")
      }
+     zipgroupfileset(dir: dir_libs, includes: "jcommander-1.48.jar")
      fileset(dir: dir_build)
     }
 }

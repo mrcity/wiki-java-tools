@@ -47,6 +47,7 @@ interface StatusHandler {
 public abstract class ImkerBase extends App {
 	protected static final String VERSION = "v16.09.11";
 	protected static final String PROGRAM_NAME = "Imker";
+	protected static final String RESOURCE_BUNDLE_BASE_NAME = "i18n/Bundle";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
 	protected static final String FILE_PREFIX = "File:";
 	private static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
@@ -61,7 +62,7 @@ public abstract class ImkerBase extends App {
 	private boolean windowsEncodeSubfolder = false;
 	// }
 	protected static final ResourceBundle MSGS = ResourceBundle.getBundle(
-			"i18n/Bundle", Locale.getDefault());
+			RESOURCE_BUNDLE_BASE_NAME, Locale.getDefault());
 
 	protected enum FileStatus {
 		DOWNLOADED, NOT_FOUND, CHECKSUM_CONFIRMED, CHECKSUM_ERROR

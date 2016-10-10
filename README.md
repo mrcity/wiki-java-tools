@@ -9,7 +9,7 @@ Batch download files from Wikimedia Commons.
 Instructions for using this tool can be found on the [wiki page](https://commons.wikimedia.org/wiki/Commons:Imker_%28batch_download%29)
 
 ## Build
-Download the source and build with ```ant```.
+Download the source and build with ```gradle```.
 
 Execute with ```java -jar toolname.jar```
 

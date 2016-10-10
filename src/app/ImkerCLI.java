@@ -277,13 +277,13 @@ public class ImkerCLI extends ImkerBase {
 		System.out.println(MSGS.getString("Description_Download_Source"));
 
 		// \u21B3 is unicode for ↳
-		System.out.println(String.format(" \u21B3 %s; %s",
+		System.out.println(String.format(" \u21B3 %s (%s)",
 				MSGS.getString("Text_Wiki_Cat"),
 				MSGS.getString("Text_Example") + " " + prefs.NAME_CATEGORY + "=\"Denver, Colorado\""));
-		System.out.println(String.format(" \u21B3 %s; %s",
+		System.out.println(String.format(" \u21B3 %s (%s)",
 				MSGS.getString("Text_Wiki_Page"),
 				MSGS.getString("Text_Example") + " " + prefs.NAME_PAGE + "=\"Sandboarding\""));
-		System.out.println(String.format(" \u21B3 %s; %s (%s)",
+		System.out.println(String.format(" \u21B3 %s (%s; %s)",
 				MSGS.getString("Text_Local_File"),
 				MSGS.getString("Text_Example") + " " + prefs.NAME_FILE + "=\"Documents" + File.separator + "files.txt\"",
 				MSGS.getString("Hint_File_Syntax")));

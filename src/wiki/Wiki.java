@@ -7643,33 +7643,27 @@ public class Wiki implements Serializable
     protected String[] constructTitleString(String[] titles, boolean limit) throws IOException
     {
         // sort and remove duplicates per [[mw:API]]
-        Set<String> blah = new TreeSet<>();
+        Set<String> set = new TreeSet<>();
         for (String title : titles)
-            blah.add(normalize(title));
-        String[] temp = blah.toArray(new String[blah.size()]);
+            set.add(normalize(title));
+        String[] titlesNorm = set.toArray(new String[set.size()]);
 
         // actually construct the string
+        String titleStringToken = encode("|", false);
         ArrayList<String> ret = new ArrayList<>();
         StringBuilder buffer = new StringBuilder();
-        for (int i = 0; i < temp.length; i++)
+        for (int i = 0; i < titlesNorm.length; i++)
         {
-            buffer.append(temp[i]);
-            if (i == temp.length - 1 || (i % slowmax == slowmax - 1) 
+            buffer.append(encode(titlesNorm[i], false));
+            if (i == titlesNorm.length - 1 || (i % slowmax == slowmax - 1)
                 || (limit && buffer.length() > URL_LENGTH_LIMIT))
             {
-                ret.add(encode(buffer.toString(), false));
+                ret.add(buffer.toString());
                 buffer.setLength(0);
             }
             else
-                buffer.append("|");
+                buffer.append(titleStringToken);
         }
-        // JDK 1.8:
-        // StringJoiner sj = new StringJoiner("|");
-        // for (int i = 0; i < temp.length; i++)
-        // {
-        //     sj.add(normalize(temp[i]));
-        //     statement of if above, removing else
-        // }
         return ret.toArray(new String[ret.size()]);
     }
 

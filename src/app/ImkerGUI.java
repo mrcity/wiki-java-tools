@@ -849,6 +849,7 @@ public class ImkerGUI extends ImkerBase {
 				@Override
 				public void changedUpdate(DocumentEvent e) {
 					prefs.put(KEY_WIKI_DOMAIN, wikiDomainField.getText());
+					preInit(false);
 				}
 			});
 		}

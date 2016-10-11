@@ -836,10 +836,23 @@ public class ImkerGUI extends ImkerBase {
 			wikiDomain.add(wikiDomainText);
 			wikiDomain.add(wikiDomainField);
 		}
+
+		final JButton resetButton = new JButton(MSGS.getString("Button_Restore_Defaults"));
+		{
+			resetButton.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent e) {
+					prefs.put(KEY_WIKI_DOMAIN, ImkerBase.PREF_WIKI_DOMAIN_DEFAULT);
+					wikiDomainField.setText(ImkerBase.PREF_WIKI_DOMAIN_DEFAULT);
+				}
+			});
+		}
 		JPanel prefsPanel = new JPanel();
 		prefsPanel.setLayout(new BoxLayout(prefsPanel, BoxLayout.Y_AXIS));
 		prefsPanel.add(Box.createVerticalStrut(GAP));
 		prefsPanel.add(wikiDomain);
+		prefsPanel.add(Box.createVerticalStrut(GAP));
+		prefsPanel.add(resetButton);
 		prefsPanel.add(Box.createVerticalStrut(GAP));
 
 		final JDialog modalDialog = new JDialog(FRAME, MSGS.getString("Text_Preferences") + " - " + PROGRAM_NAME,

@@ -85,6 +85,13 @@ public class ImkerGUI extends ImkerBase {
 
 	private static final int GAP = 12;
 
+	// Preferences {
+	final String PREFS_NODE_PATH = "imker/gui";
+	final Preferences prefs = Preferences.userRoot().node(PREFS_NODE_PATH);
+
+	final String KEY_WIKI_DOMAIN = "KEY_WIKI_DOMAIN";
+	// }
+
 	/**
 	 * Decide which action to execute after the main button was pressed
 	 */
@@ -124,6 +131,7 @@ public class ImkerGUI extends ImkerBase {
 			state = State.TERMINATED;
 			return;
 		}
+		setWiki(prefs.get(KEY_WIKI_DOMAIN, ImkerBase.PREF_WIKI_DOMAIN_DEFAULT));
 		try {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Wait_For_List"));
 			JProgressBar progressBarIndet = new JProgressBar();
@@ -817,11 +825,6 @@ public class ImkerGUI extends ImkerBase {
 	}
 
 	private void popupPreferences() {
-		final String PREFS_NODE_PATH = "imker/gui";
-		final String KEY_WIKI_DOMAIN = "KEY_WIKI_DOMAIN";
-
-		final Preferences prefs = Preferences.userRoot().node(PREFS_NODE_PATH);
-
 		JPanel wikiDomain = new JPanel(new FlowLayout());
 		{
 			final JTextField wikiDomainField = new JTextField(
@@ -845,9 +848,7 @@ public class ImkerGUI extends ImkerBase {
 
 				@Override
 				public void changedUpdate(DocumentEvent e) {
-					String wd = wikiDomainField.getText();
-					prefs.put(KEY_WIKI_DOMAIN, wd);
-					setWiki(wd);
+					prefs.put(KEY_WIKI_DOMAIN, wikiDomainField.getText());
 				}
 			});
 		}

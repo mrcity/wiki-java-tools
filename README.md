@@ -8,7 +8,7 @@ Scan recent Wikimedia Commons uploads from external sources for unconfirmed lice
 ## Usage
 Download the source and build with ```ant```.
 
-Execute with ```java -jar toolname.jar```
+Execute with ```java -jar flock.jar```
 
 
 ## License

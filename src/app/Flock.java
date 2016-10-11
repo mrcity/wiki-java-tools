@@ -92,7 +92,7 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v15.08.27";
+	static final String VERSION = "v16.10.01";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
@@ -176,6 +176,7 @@ public class Flock extends App {
 				return wiki.listRecentUploads(DAYS_BEGIN, DAYS_END);
 			}
 		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		final boolean[] memberExists = wiki.exists(members);
 		for (int j = 0; j < members.length; ++j) {
 			final int i = j;
 			System.out.println(i + " of " + members.length + " done. (Next: "
@@ -184,12 +185,14 @@ public class Flock extends App {
 
 				@Override
 				public Object fetch() throws IOException, LoginException {
-					if (wiki.exists(new String[] { members[i] })[0]) {
-						return wiki.getPageText(members[i]);
-					} else {
+					String text = null;
+					if (memberExists[i])
+						text = wiki.getPageText(members[i]);
+					if (text == null) {
 						deleted++;
 						return DELETED_TEXT;
 					}
+					return text;
 				}
 			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 			if (text == DELETED_TEXT)
@@ -231,7 +234,7 @@ public class Flock extends App {
 				- DAYS_BEGIN * 24 * 60 * 60 * 1000)));
 		String rcEnd = (dateFormat.format(new Date(System.currentTimeMillis()
 				- DAYS_END * 24 * 60 * 60 * 1000)));
-		final String talkPageTitle = "User talk:" + MAINTAINER;
+		final String talkPageTitle = wiki.namespaceIdentifier(Wiki.USER_TALK_NAMESPACE) + MAINTAINER;
 		final String reportText = "\n== Report for files uploaded between "
 				+ rcStart
 				+ " and "

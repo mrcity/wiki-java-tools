@@ -101,7 +101,7 @@ public class ImkerCLI extends ImkerBase {
 			if (getFileStatuses()[i] == FileStatus.CHECKSUM_ERROR)
 				Files.delete(new File(getOutputFolder().getPath()
 						+ File.separator
-						+ getFileNames()[i].substring(FILE_PREFIX.length()))
+						+ getFileNames()[i].substring(getFilePrefixLenght()))
 						.toPath());
 		}
 

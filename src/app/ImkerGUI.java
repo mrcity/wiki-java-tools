@@ -131,8 +131,9 @@ public class ImkerGUI extends ImkerBase {
 			state = State.TERMINATED;
 			return;
 		}
-		setWiki(prefs.get(KEY_WIKI_DOMAIN, ImkerBase.PREF_WIKI_DOMAIN_DEFAULT));
 		try {
+			setWiki(prefs.get(KEY_WIKI_DOMAIN, ImkerBase.PREF_WIKI_DOMAIN_DEFAULT));
+
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Wait_For_List"));
 			JProgressBar progressBarIndet = new JProgressBar();
 			progressBarIndet.setIndeterminate(true);
@@ -464,7 +465,7 @@ public class ImkerGUI extends ImkerBase {
 			if (getFileStatuses()[i] == FileStatus.CHECKSUM_ERROR)
 				Files.delete(new File(getOutputFolder().getPath()
 						+ File.separator
-						+ getFileNames()[i].substring(FILE_PREFIX.length()))
+						+ getFileNames()[i].substring(getFilePrefixLenght()))
 						.toPath());
 		}
 

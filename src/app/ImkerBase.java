@@ -49,7 +49,6 @@ public abstract class ImkerBase extends App {
 	protected static final String PROGRAM_NAME = "Imker";
 	protected static final String RESOURCE_BUNDLE_BASE_NAME = "i18n/Bundle";
 	protected static final String GITHUB_ISSUE_TRACKER = "https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=%s&body=%s";
-	protected static final String FILE_PREFIX = "File:";
 	private static final String[] INVALID_FILE_NAME_CHARS = { "{", "}", "<",
 			">", "[", "]", "|" };
 	private static final String[] INVALID_WINDOWS_CHARS = { "?", "\"", "*" };
@@ -60,6 +59,7 @@ public abstract class ImkerBase extends App {
 	private String[] fileNames;
 	private FileStatus[] fileStatuses;
 	private boolean windowsEncodeSubfolder = false;
+	private int filePrefixLength;
 	// }
 	// Preferences {
 	protected static final String PREF_WIKI_DOMAIN_DEFAULT = "commons.wikimedia.org";
@@ -118,7 +118,7 @@ public abstract class ImkerBase extends App {
 
 		for (int i = 0; i < fileNames.length; i++) {
 			final String fileName = fileNames[i]
-					.substring(FILE_PREFIX.length());
+					.substring(getFilePrefixLenght());
 			sh.handle(i, fileName);
 
 			final File outputFile = new File(outputFolder.getPath()
@@ -199,7 +199,7 @@ public abstract class ImkerBase extends App {
 		int errors = 0;
 		for (int i = 0; i < fileStatuses.length; i++) {
 			final String fileName = fileNames[i]
-					.substring(FILE_PREFIX.length());
+					.substring(getFilePrefixLenght());
 			sh.handle(i, fileName);
 			if (fileStatuses[i] == FileStatus.DOWNLOADED) {
 
@@ -340,6 +340,7 @@ public abstract class ImkerBase extends App {
 		setFileNames(null);
 		setFileStatuses(null);
 		windowsEncodeSubfolder = false;
+		wiki = null;
 	}
 
 	/**
@@ -416,11 +417,17 @@ public abstract class ImkerBase extends App {
 	 * 
 	 * @param domain
 	 *            the wiki domain name e.g. en.wikipedia.org
+	 * @throws IOException
+	 *             when a network error occurs
 	 */
-	public void setWiki(String domain) {
+	public void setWiki(String domain) throws IOException {
 		wiki = new Wiki(domain);
 		wiki.setMaxLag(3);
 		wiki.setLogLevel(Level.WARNING);
+		filePrefixLength = 1 + wiki.namespaceIdentifier(Wiki.FILE_NAMESPACE).length();
 	}
 
+	public int getFilePrefixLenght() {
+		return filePrefixLength;
+	}
 }

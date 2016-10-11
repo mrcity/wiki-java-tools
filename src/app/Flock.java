@@ -197,11 +197,16 @@ public class Flock extends App {
 
 			final boolean hasValidSourceOrLicense = Regex.VALID_SOURCE_OR_LICENSE.isMatch(membersText[i]);
 
+			if (hasValidSourceOrLicense) {
+				membersText[i] = null; // garbage collect
+				continue;
+			}
+
 			for (final Regex regex : Regex.values()) {
-				if (regex.name().equals(Regex.VALID_SOURCE_OR_LICENSE.name())) {
-					continue; // Skip
-				}
-				if (!hasValidSourceOrLicense && regex.isMatch(membersText[i])) {
+				if (regex.name().equals(Regex.VALID_SOURCE_OR_LICENSE.name()))
+					continue; // Skip this particular regex
+
+				if (regex.isMatch(membersText[i])) {
 					if (!validLicense(members[i], wiki))
 						attemptFetch(new WikiAPI() {
 

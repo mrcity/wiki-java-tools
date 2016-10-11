@@ -18,6 +18,8 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -56,8 +58,6 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 
 import wiki.Wiki;
 
@@ -826,32 +826,15 @@ public class ImkerGUI extends ImkerBase {
 
 	private void popupPreferences() {
 		JPanel wikiDomain = new JPanel(new FlowLayout());
+		final JTextField wikiDomainField;
 		{
-			final JTextField wikiDomainField = new JTextField(
-					prefs.get(KEY_WIKI_DOMAIN, ImkerBase.PREF_WIKI_DOMAIN_DEFAULT));
+			wikiDomainField = new JTextField(prefs.get(KEY_WIKI_DOMAIN, ImkerBase.PREF_WIKI_DOMAIN_DEFAULT));
 			JTextArea wikiDomainText = new JTextArea(MSGS.getString("Description_Wiki_Domain") + ":");
 			wikiDomainText.setEditable(false);
 			wikiDomainText.setFocusable(false);
 			wikiDomainText.setBackground(new Color(0, 0, 0, 0));
 			wikiDomain.add(wikiDomainText);
 			wikiDomain.add(wikiDomainField);
-			wikiDomainField.getDocument().addDocumentListener(new DocumentListener() {
-				@Override
-				public void removeUpdate(DocumentEvent e) {
-					changedUpdate(e);
-				}
-
-				@Override
-				public void insertUpdate(DocumentEvent e) {
-					changedUpdate(e);
-				}
-
-				@Override
-				public void changedUpdate(DocumentEvent e) {
-					prefs.put(KEY_WIKI_DOMAIN, wikiDomainField.getText());
-					preInit(false);
-				}
-			});
 		}
 		JPanel prefsPanel = new JPanel();
 		prefsPanel.setLayout(new BoxLayout(prefsPanel, BoxLayout.Y_AXIS));
@@ -861,6 +844,18 @@ public class ImkerGUI extends ImkerBase {
 
 		final JDialog modalDialog = new JDialog(FRAME, MSGS.getString("Text_Preferences") + " - " + PROGRAM_NAME,
 				ModalityType.APPLICATION_MODAL);
+		modalDialog.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosed(WindowEvent e) {
+				prefs.put(KEY_WIKI_DOMAIN, wikiDomainField.getText());
+				preInit(false);
+			}
+
+			@Override
+			public void windowClosing(WindowEvent e) {
+				modalDialog.dispose();
+			}
+		});
 		modalDialog.add(prefsPanel);
 		modalDialog.pack();
 		modalDialog.setMinimumSize(modalDialog.getSize());

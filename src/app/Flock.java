@@ -92,13 +92,12 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v16.10.01";
+	static final String VERSION = "v16.10.02";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
 	final static int DAYS_BEGIN = 15;
 	final static int DAYS_END = 6;
-	final static String DELETED_TEXT = "";
 
 	static final String REGEX_FLAGS = "(?si)";
 
@@ -176,42 +175,33 @@ public class Flock extends App {
 				return wiki.listRecentUploads(DAYS_BEGIN, DAYS_END);
 			}
 		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-		final boolean[] memberExists = wiki.exists(members);
+		final String[] membersText = (String[]) attemptFetch(new WikiAPI() {
+			@Override
+			public Object fetch() throws IOException, LoginException {
+				return wiki.getPageText(members);
+			}
+		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
 		for (int j = 0; j < members.length; ++j) {
 			final int i = j;
 			System.out.println(i + " of " + members.length + " done. (Next: "
 					+ members[i].replace("File:", "") + ")");
-			String text = (String) attemptFetch(new WikiAPI() {
-
-				@Override
-				public Object fetch() throws IOException, LoginException {
-					String text = null;
-					if (memberExists[i])
-						text = wiki.getPageText(members[i]);
-					if (text == null) {
-						deleted++;
-						return DELETED_TEXT;
-					}
-					return text;
-				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
-			if (text == DELETED_TEXT)
+			if (membersText[i] == null)
 				continue;
-			if (text.length() > MAX_TEXT_LENGTH) {
+			if (membersText[i].length() > MAX_TEXT_LENGTH) {
 				checkNeeded = checkNeeded + "*[[:" + members[i]
 						+ "]] (skipped)\n";
 				skipped++;
+				membersText[i] = null; // garbage collect
 				continue;
 			}
 
-			final boolean hasValidSourceOrLicense = Regex.VALID_SOURCE_OR_LICENSE
-					.isMatch(text);
+			final boolean hasValidSourceOrLicense = Regex.VALID_SOURCE_OR_LICENSE.isMatch(membersText[i]);
 
 			for (final Regex regex : Regex.values()) {
 				if (regex.name().equals(Regex.VALID_SOURCE_OR_LICENSE.name())) {
 					continue; // Skip
 				}
-				if (regex.isMatch(text) && !hasValidSourceOrLicense) {
+				if (regex.isMatch(membersText[i]) && !hasValidSourceOrLicense) {
 					if (!validLicense(members[i], wiki))
 						attemptFetch(new WikiAPI() {
 
@@ -226,6 +216,7 @@ public class Flock extends App {
 					break;
 				}
 			}
+			membersText[i] = null; // garbage collect
 		}
 
 		// Conclude

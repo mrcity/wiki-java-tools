@@ -175,6 +175,7 @@ public class Flock extends App {
 				return wiki.listRecentUploads(DAYS_BEGIN, DAYS_END);
 			}
 		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		System.out.println("Fetching all page texts");
 		final String[] membersText = (String[]) attemptFetch(new WikiAPI() {
 			@Override
 			public Object fetch() throws IOException, LoginException {

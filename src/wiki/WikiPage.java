@@ -14,11 +14,17 @@ import java.util.regex.Pattern;
 import javax.security.auth.login.LoginException;
 
 public class WikiPage {
-	private static final String noToken = "true";
+	private static final String NO_TOKEN = "true";
+	private static final WikiCategory REVOKED_CATEGORY = new WikiCategory("",
+			null, null);
+	private static final Pattern UPLOADED_BY = Pattern
+			.compile(Commons.CASE_INSENSITIVE
+					+ "uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]]");
+
 	private boolean isFile;
 	// private boolean isRedirect; // TODO implementation?
 	private String name;
-	private Category[] parents;
+	private WikiCategory[] parents;
 	private String[] text;
 	private Wiki wiki;
 	private boolean isCleanedUp;
@@ -101,7 +107,7 @@ public class WikiPage {
 		for (int i = 0; i < text.length; ++i) {
 			String cleanText;
 			String textPart;
-			if (text[i++].equals(noToken))
+			if (text[i++].equals(NO_TOKEN))
 				textPart = text[i];
 			else
 				continue;
@@ -120,6 +126,16 @@ public class WikiPage {
 					appendToEditSummary("Removing redundant information. ");
 					// per
 					// https://commons.wikimedia.org/wiki/Commons:IntRegex#.7B.7BInformation.7D.7D_fields
+					textPart = cleanText;
+				}
+				cleanText = regexCleaner(textPart, Commons.UPLOADED_BY_REGEX,
+						false);
+				if (!textPart.equals(cleanText)) {
+					Matcher m = UPLOADED_BY.matcher(textPart);
+					m.find(); // This is always true because
+								// Commons.UPLOADED_BY_REGEX already matched
+					appendToEditSummary("Removing redundant and possibly misleading information: \""
+							+ m.group() + "\". ");
 					textPart = cleanText;
 				}
 				cleanText = regexCleaner(textPart, Commons.DATE_REGEX, false);
@@ -168,6 +184,14 @@ public class WikiPage {
 				textPart = cleanText;
 			}
 			text[i] = textPart;
+		}
+		if (!getPlainText().matches(
+				"(?ius).*?\\{\\{\\s*int:filedesc\\s*\\}\\}.*?")) {
+			this.setPlainText("== {{int:filedesc}} ==\n" + getPlainText());
+			// TODO minor changes can not be logged in the edit summary as of
+			// now.
+			if (getEditSummary().length() > 0)
+				appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
 		}
 	}
 
@@ -288,7 +312,7 @@ public class WikiPage {
 				"(?is)" + ".*?\\[\\[category:[^\\]\\[}{]+\\]\\].*"))
 			return;
 		// Category array derived from the pageText!
-		Category[] parentCategories = getParentCatsNoDupes();
+		WikiCategory[] parentCategories = getParentCatsNoDupes();
 		this.cleanupAnyway |= !editSummary.isEmpty()
 				|| duplicateCategoryCleanup;
 		// String array returned via the API, no duplicate entries, no sortkey,
@@ -308,7 +332,7 @@ public class WikiPage {
 
 		Object[] cleanedCatsAndText = returnCleanedCatsAndText(cleanupAnyway,
 				ignoreHidden, depth, parentCategories, allGrandparentCategories);
-		Category[] cleanParentCategories = (Category[]) cleanedCatsAndText[0];
+		WikiCategory[] cleanParentCategories = (WikiCategory[]) cleanedCatsAndText[0];
 		String removedCategoriesWikitext = (String) cleanedCatsAndText[1];
 		String cleanCategoryWikitext = (String) cleanedCatsAndText[2];
 
@@ -318,11 +342,9 @@ public class WikiPage {
 			String textOldSingleLine = getPlainText().replaceAll("\\n", "")
 					.toLowerCase();
 			// Removes the categories from the text
-			for (Category z : parentCategories)
-				replaceAllInPagetext(
-						"(?iu)" + "\\[\\[Category:" + "\\Q" + z.getName()
-								+ "\\E" + "(\\|[^}#\\]\\[{><]*)?" + "\\]\\]",
-						"");
+			for (WikiCategory z : parentCategories)
+				replaceAllInPagetext("(?iu)" + "\\[\\[" + "\\Q" + z.getName()
+						+ "\\E" + "(\\|[^}#\\]\\[{><]*)?" + "\\]\\]", "");
 			String textNew = (getPlainText() + cleanCategoryWikitext)
 					.replaceAll("\\n{3,}", "\n\n");
 			this.setPlainText(textNew);
@@ -449,44 +471,44 @@ public class WikiPage {
 	 * @throws IOException
 	 */
 	private Object[] returnCleanedCatsAndText(boolean cleanupAnyway,
-			boolean ignoreHidden, int depth, Category[] parentCategories,
+			boolean ignoreHidden, int depth, WikiCategory[] parentCategories,
 			String[] grandparentStrings) throws IOException {
-		Category[] cleanCategories = new Category[parentCategories.length];
+		WikiCategory[] cleanCategories = new WikiCategory[parentCategories.length];
 		String categoryWikitext = "";
 		String removedCatsWikitext = "";
 
 		int revokedCounter = 0;
-		String revokedFlag = "e7db5f37c0a2bc9b525d8ab86ea9ed12";
 		// calculate the number of redundant categories
 		for (int i = 0; i < parentCategories.length; i++) {
-			cleanCategories[i] = new Category(parentCategories[i].getName(),
-					parentCategories[i].getSortkey()); // clone
+			cleanCategories[i] = new WikiCategory(
+					parentCategories[i].getName(),
+					parentCategories[i].getSortkey(), null); // clone
 			for (int r = 0; r < grandparentStrings.length; r++) {
-				if ((parentCategories[i].getName().equals(grandparentStrings[r]
-						.split(":", 2)[1]))) {
+				if ((parentCategories[i].getName()
+						.equals(grandparentStrings[r]))) {
 					removedCatsWikitext = removedCatsWikitext
-							+ "[[:Category:"
+							+ "[[:"
 							+ parentCategories[i].getName()
 							+ "]]"
-							+ childrenOfRemovedCat("Category:"
-									+ parentCategories[i].getName(), depth,
+							+ childrenOfRemovedCat(
+									parentCategories[i].getName(), depth,
 									ignoreHidden) + ", ";
 					revokedCounter++;
-					cleanCategories[i].setName(revokedFlag);
+					cleanCategories[i] = REVOKED_CATEGORY;
 					break;
 				}
 			}
 		}
 		// create a new array for the clean categories if needed
 		if (cleanupAnyway || revokedCounter > 0) {
-			Category[] cleanCategoriesReturn = new Category[cleanCategories.length
+			WikiCategory[] cleanCategoriesReturn = new WikiCategory[cleanCategories.length
 					- revokedCounter];
 			int temp = 0;
-			for (Category i : cleanCategories) {
-				if (!i.getName().equals(revokedFlag)) {
+			for (WikiCategory i : cleanCategories) {
+				if (!(i == REVOKED_CATEGORY)) {
 					cleanCategoriesReturn[temp++] = i;
 					categoryWikitext = categoryWikitext
-							+ "\n[[Category:"
+							+ "\n[["
 							+ i.getName()
 							+ ((i.getSortkey() == null) ? "]]" : "|"
 									+ i.getSortkey() + "]]");
@@ -543,7 +565,7 @@ public class WikiPage {
 	 */
 	public void replaceAllInPagetext(String regex, String replacement) {
 		for (int p = 0; p < text.length; ++p) {
-			if (text[p].equals(noToken))/* || text[p].equals("<code>")) */{
+			if (text[p].equals(NO_TOKEN))/* || text[p].equals("<code>")) */{
 				++p;
 				text[p] = text[p].replaceAll(regex, replacement);
 			} else
@@ -588,7 +610,7 @@ public class WikiPage {
 			}
 		}
 		if (smallestIndexOfPrefix == text.length()) {
-			list.add(noToken);
+			list.add(NO_TOKEN);
 			list.add(text);
 			return list;
 		}
@@ -596,7 +618,7 @@ public class WikiPage {
 		String suf = preserve[prefixWithSmallestIndex][1];
 
 		String[] splitPre = text.split("(?i)" + pre, 2);
-		list.add(noToken);
+		list.add(NO_TOKEN);
 		list.add(splitPre[0]);
 		list.add(pre);// add pre instead of false!
 		String[] splitSuf = splitPre[1].split("(?i)" + suf, 2);
@@ -655,24 +677,25 @@ public class WikiPage {
 	 * @return The Category array with no duplicate entries
 	 * @throws IOException
 	 */
-	private Category[] getParentCatsNoDupes() throws IOException {
+	private WikiCategory[] getParentCatsNoDupes() throws IOException {
 		if (isCleanedUp == false)
 			this.cleanupWikitext();
 		if (parents == null) {
 			String[] parentCats = getParentCatsFromPagetext(true);
 			// wipe dupes
 			Set<String> names = new HashSet<String>();
-			List<Category> catList = new ArrayList<Category>();
+			List<WikiCategory> catList = new ArrayList<WikiCategory>();
 			for (String name : parentCats) {
 				String splitString[] = name.split("\\|", 2);
 				if (names.add(splitString[0])
 						&& (!splitString[0].matches("^[ ]*$"))) {
-					catList.add(new Category(splitString[0],
-							(splitString.length == 2) ? splitString[1] : null));
+					catList.add(new WikiCategory(splitString[0],
+							(splitString.length == 2) ? splitString[1] : null,
+							null));
 				} else
 					this.duplicateCategoryCleanup = true;
 			}
-			this.parents = catList.toArray(new Category[catList.size()]);
+			this.parents = catList.toArray(new WikiCategory[catList.size()]);
 		}
 		return parents;
 	}
@@ -724,7 +747,7 @@ public class WikiPage {
 	public String getPlainTextNoComments() {
 		String returnString = "";
 		for (int u = 0; u < text.length; ++u) {
-			if (text[u].equals(noToken))// || text[u].equals("<code>"))
+			if (text[u].equals(NO_TOKEN))// || text[u].equals("<code>"))
 				returnString += text[++u];
 			else
 				++u;
@@ -747,39 +770,5 @@ public class WikiPage {
 		this.editSummary = "";
 		this.isCleanedUp = false;
 		this.isCleanedUp_overcat = false;
-	}
-}
-
-class Category {
-	private String name;
-	private String sortkey;
-
-	/**
-	 * Internal representation of a category
-	 * 
-	 * @param name
-	 *            The name of the category (without the "Category:"-prefix)
-	 * @param sortkey
-	 *            Either a String holding the sortkey or null
-	 */
-	Category(String name, String sortkey) {
-		this.name = WikiPage.firstCharToUpperCase(name);
-		this.sortkey = sortkey;
-	}
-
-	String getName() {
-		return name;
-	}
-
-	String getSortkey() {
-		return sortkey;
-	}
-
-	void setSortkey(String sortkey) {
-		this.sortkey = sortkey;
-	}
-
-	void setName(String name) {
-		this.name = name;
 	}
 }

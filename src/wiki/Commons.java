@@ -61,7 +61,7 @@ public class Commons {
 			{
 					CASE_INSENSITIVE
 							+ "(\\|\\s*source\\s*=\\s*)(((?:\\'\\'+)?)([\\\"\\']?)(?:selbst\\W*erstellte?s?|selbst\\W*gezeichnete?s?|self\\W*made|eigene?s?)\\W*?(?:arbeit|aufnahme|(?:ph|f)oto(?:gra(?:ph|f)ie)?)?\\.?\\4\\3) *(\\||\\}\\}|\\r|\\n)",
-					"$1{{own}} ({{original text|1=$2|nobold=1}})$5" },
+					"$1{{own}}$5" },
 			{
 					CASE_INSENSITIVE
 							+ "(\\|\\s*source\\s*=\\s*)(?:self[^a-z]*photographed|selbst[^a-z]*(?:aufgenommen|(?:f|ph)otogra(?:f|ph)iert?)|投稿者撮影|投稿者の撮影)\\s*?\\.? *(\\||\\}\\}|\\r|\\n)",
@@ -97,11 +97,11 @@ public class Commons {
 					"$1$2" },
 			{
 					CASE_INSENSITIVE
-							+ "(\\|\\s*permission\\s*=)\\s*((?:\\'\\')?)(?:-|下記を参照|see(?: licens(?:e|ing|e +section))?(?: below)?|yes|oui)\\s*?\\,?\\.?;?\\s*?\\2\\s*?(\\||\\}\\}|\\r|\\n)",
+							+ "(\\|\\s*permission\\s*=)\\s*((?:\\'\\')?)(?:-|—|下記を参照|see(?: licens(?:e|ing|e +section))?(?: below)?|yes|oui)\\s*?\\,?\\.?;?\\s*?\\2\\s*?(\\||\\}\\}|\\r|\\n)",
 					"$1$3" },
 			{
 					CASE_INSENSITIVE
-							+ "(\\|\\s*other[_ ]versions\\s*=)\\s*(?:<i>)?(?:-|no|none?(?: known)?|nein|yes|keine|\\-+)\\.?(?:</i>)? *(\\||\\}\\}|\\r|\\n)",
+							+ "(\\|\\s*other[_ ]versions\\s*=)\\s*(?:<i>)?(?:-|—|no|none?(?: known)?|nein|yes|keine|\\-+)\\.?(?:</i>)? *(\\||\\}\\}|\\r|\\n)",
 					"$1$2" },
 			{
 					CASE_INSENSITIVE
@@ -123,6 +123,10 @@ public class Commons {
 					CASE_INSENSITIVE
 							+ "(\\{\\{\\s*information\\s*)\\|(\\s*\\||\\}\\})",
 					"$1$2" } };
+	public static final String[][] UPLOADED_BY_REGEX = { {
+			CASE_INSENSITIVE
+					+ "(\\|\\s*source\\s*\\=\\s*[^*]+?)\\n?\\*\\s*uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]](\\||\\}\\}|\\r|\\n)",
+			"$1$2" } };
 	public static final String[][] DATE_REGEX = {
 			{
 					CASE_INSENSITIVE

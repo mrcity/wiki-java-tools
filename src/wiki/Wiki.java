@@ -7456,9 +7456,10 @@ public class Wiki implements Serializable
      */
     protected synchronized boolean checkLag(URLConnection connection)
     {
-        // check lag
         int lag = connection.getHeaderFieldInt("X-Database-Lag", -5);
-        if (lag > maxlag)
+        // X-Database-Lag is integer, so a lag of 1.972 gives X-Database-Lag == 1
+        // Thus, we need to retry in case of equality:
+        if (lag >= maxlag)
         {
             try
             {

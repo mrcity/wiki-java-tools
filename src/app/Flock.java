@@ -228,9 +228,9 @@ public class Flock extends App {
 		// Conclude
 		DateFormat dateFormat = new SimpleDateFormat("MMMMMMMMMMMMMMMMMMMMM dd");
 		String rcStart = (dateFormat.format(new Date(System.currentTimeMillis()
-				- DAYS_BEGIN * 24 * 60 * 60 * 1000)));
+				- DAYS_BEGIN * 24L * 60 * 60 * 1000)));
 		String rcEnd = (dateFormat.format(new Date(System.currentTimeMillis()
-				- DAYS_END * 24 * 60 * 60 * 1000)));
+				- DAYS_END * 24L * 60 * 60 * 1000)));
 		final String talkPageTitle = wiki.namespaceIdentifier(Wiki.USER_TALK_NAMESPACE) + ":" + MAINTAINER;
 		final String reportText = "\n== Report for files uploaded between "
 				+ rcStart

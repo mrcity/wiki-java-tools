@@ -462,7 +462,7 @@ public class Wiki implements Serializable
     // chunked uploads by setting a large value here (50 = 1 PB will do).
     private static final int LOG2_CHUNK_SIZE = 22;
     // maximum URL length in bytes
-    private static final int URL_LENGTH_LIMIT = 7500;
+    private static final int URL_LENGTH_LIMIT = 8192;
 
     // CONSTRUCTORS AND CONFIGURATION
 
@@ -7650,25 +7650,32 @@ public class Wiki implements Serializable
         // sort and remove duplicates per [[mw:API]]
         Set<String> set = new TreeSet<>();
         for (String title : titles)
-            set.add(normalize(title));
-        String[] titlesNorm = set.toArray(new String[set.size()]);
+            set.add(encode(title, true));
+        String[] titlesEnc = set.toArray(new String[set.size()]);
 
         // actually construct the string
         String titleStringToken = encode("|", false);
         ArrayList<String> ret = new ArrayList<>();
         StringBuilder buffer = new StringBuilder();
-        for (int i = 0; i < titlesNorm.length; i++)
+        buffer.append(titlesEnc[0]);
+        int num = 1;
+        for (int i = num; i < titlesEnc.length; i++)
         {
-            buffer.append(encode(titlesNorm[i], false));
-            if (i == titlesNorm.length - 1 || (i % slowmax == slowmax - 1)
-                || (limit && buffer.length() > URL_LENGTH_LIMIT))
+            if (num < slowmax && // Assume the base url takes 400 bytes
+                buffer.length() + titleStringToken.length() + titlesEnc[i].length() < URL_LENGTH_LIMIT - 400)
+            {
+                buffer.append(titleStringToken);
+            }
+            else
             {
                 ret.add(buffer.toString());
                 buffer.setLength(0);
+                num = 0;
             }
-            else
-                buffer.append(titleStringToken);
+            buffer.append(titlesEnc[i]);
+            ++num;
         }
+        ret.add(buffer.toString());
         return ret.toArray(new String[ret.size()]);
     }
 

@@ -29,18 +29,15 @@ public class ParseUtils
 	}
 	
 	/**
-	 * Gets the target of the redirect page. </br><b>PRECONDITION</b>: <tt>redirect</tt> must be a
-	 * Redirect.
+	 *  Gets the target of the redirect page. 
+         *  <br><b>PRECONDITION</b>: <tt>redirect</tt> must be a Redirect.
 	 * 
-	 * @param redirect The title of the redirect to get the target for.
-	 * @param wiki The wiki object to use.
-	 * 
-	 * @return String The title of the redirect's target.
-	 * 
-	 * @throws UnsupportedOperationException If the page was not a redirect page.
-	 * @throws IOException If network error
+	 *  @param redirect The title of the redirect to get the target for.
+	 *  @param wiki The wiki object to use.
+	 *  @return String The title of the redirect's target.
+	 *  @throws UnsupportedOperationException If the page was not a redirect page.
+	 *  @throws IOException if there is a network error
 	 */
-
 	public static String getRedirectTarget(String redirect, Wiki wiki) throws IOException
 	{
 		String text = wiki.getPageText(redirect).trim();
@@ -456,6 +453,9 @@ public class ParseUtils
          *  Gets the position of the text that start with a specified String and ends
          *  with a specfied string. Used to get the start and end position of noWiki
          *  text and comments
+	 *
+	 *  <i>Start</i> may be "^" which is the beginning of the text.
+	 *  <i>End</i> may be "$" which is the end of the text.
          *
          *  @param text the text
          *  @param start the starting string
@@ -465,13 +465,27 @@ public class ParseUtils
          */
         public static HashMap<Integer, Integer> getIgnorePositions(String text, String start, String end)
         {
-                int startPos = text.indexOf(start);
+                int startPos;
+
+                if ( start.equals("^") ) {
+                    startPos=0;
+                } else {
+                    startPos = text.indexOf(start);
+                }
+
                 if (startPos == -1)
                         return null;
                 HashMap<Integer, Integer> noWikiPos = new HashMap<Integer, Integer>();
                 while (startPos != -1)
                 {
-                        int endPos = text.indexOf(end, startPos);
+                        int endPos;
+
+                        if ( end.equals("$") ){
+                            endPos=text.length()-1;
+                        } else {
+                            endPos = text.indexOf(end, startPos);
+                        }
+
                         if (endPos != -1)
                                 noWikiPos.put(startPos, endPos);
                         else
@@ -481,7 +495,7 @@ public class ParseUtils
                 }
                 return noWikiPos;
         }
-        
+
         /**
          *  Gets the internal links contained in the given wikitext.
          *  @param text the wikitext

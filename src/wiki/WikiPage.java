@@ -17,6 +17,9 @@ public class WikiPage {
 	private static final String NO_TOKEN = "true";
 	private static final WikiCategory REVOKED_CATEGORY = new WikiCategory("",
 			null, null);
+	private static final Pattern UPLOADED_BY = Pattern
+			.compile(Commons.CASE_INSENSITIVE
+					+ "uploaded\\s+by\\s+\\[\\[user\\:[^\\]]+]]");
 
 	private boolean isFile;
 	// private boolean isRedirect; // TODO implementation?
@@ -125,6 +128,16 @@ public class WikiPage {
 					// https://commons.wikimedia.org/wiki/Commons:IntRegex#.7B.7BInformation.7D.7D_fields
 					textPart = cleanText;
 				}
+				cleanText = regexCleaner(textPart, Commons.UPLOADED_BY_REGEX,
+						false);
+				if (!textPart.equals(cleanText)) {
+					Matcher m = UPLOADED_BY.matcher(textPart);
+					m.find(); // This is always true because
+								// Commons.UPLOADED_BY_REGEX already matched
+					appendToEditSummary("Removing redundant and possibly misleading information: \""
+							+ m.group() + "\". ");
+					textPart = cleanText;
+				}
 				cleanText = regexCleaner(textPart, Commons.DATE_REGEX, false);
 				cleanText = Commons.dateRegexCleanup(cleanText);
 				if (!(textPart.equals(cleanText))) {
@@ -175,8 +188,10 @@ public class WikiPage {
 		if (!getPlainText().matches(
 				"(?ius).*?\\{\\{\\s*int:filedesc\\s*\\}\\}.*?")) {
 			this.setPlainText("== {{int:filedesc}} ==\n" + getPlainText());
-			// TODO minor changes can not be logged in the edit summary as of now
-			// appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
+			// TODO minor changes can not be logged in the edit summary as of
+			// now.
+			if (getEditSummary().length() > 0)
+				appendToEditSummary("[[Com:regex#Headings|Add missing summary heading]]. ");
 		}
 	}
 

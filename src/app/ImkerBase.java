@@ -136,7 +136,7 @@ public abstract class ImkerBase extends App {
 				public Object fetch() throws IOException {
 					return wiki.getImage(fileName, outputFile);
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 			if (downloaded == false) {
 				fileStatuses[i] = FileStatus.NOT_FOUND;
 				sh.handleConclusion(" ... "
@@ -266,7 +266,7 @@ public abstract class ImkerBase extends App {
 			public String[] fetch() throws IOException {
 				return wiki.getImagesOnPage(title);
 			}
-		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 		if (!resolveRedirects)
 			return list;
 

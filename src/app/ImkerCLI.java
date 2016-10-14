@@ -231,7 +231,7 @@ public class ImkerCLI extends ImkerBase {
 					boolean subcat = false; // TODO: add argument --subcat
 					return getWiki().getCategoryMembers(category, subcat, Wiki.FILE_NAMESPACE);
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 		} else if (page != null) {
 			fnames = getImagesOnPage(page, true);
 		} else if (file != null) {

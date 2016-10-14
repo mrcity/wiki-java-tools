@@ -516,7 +516,7 @@ public class ImkerGUI extends ImkerBase {
 					return getWiki().getCategoryMembers(inputCategory, subcat,
 							Wiki.FILE_NAMESPACE);
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 		} else if (PAGE_BUTTON.isSelected()) {
 			STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Get_Page")
 					+ " ...");

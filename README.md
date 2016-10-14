@@ -11,7 +11,10 @@ Instructions for using this tool can be found on the [wiki page](https://commons
 ## Build
 Download the source and build with ```gradle```.
 
-Execute with ```java -jar toolname.jar```
+Execute with ```java -jar imker-cli.jar``` or ```java -jar imker-gui.jar```
+
+## Issues
+Please [report](https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=Imker%3A) any issues with the code.
 
 ## License
 [GPLv3+](COPYING.GPL)

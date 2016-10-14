@@ -33,6 +33,7 @@ public class Upload {
 	 * @return the password
 	 */
 	private static char[] passwordDialog(String[] args) {
+		System.out.println(PROGRAM_NAME);
 		System.out.println(VERSION);
 
 		String[] expectedArgs = { "username", "folder", "comment" };

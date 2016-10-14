@@ -350,7 +350,7 @@ class TopBotThread extends Thread {
 		String editCount = "User:" + userName + "/editCount";
 
 		String text = "{{#ifexpr:{{" + editCount + "}}>" + "{{#expr: "
-				+ threshold + "+ {{subst:" + editCount + "}}" + "}}"
+				+ threshold + " + {{subst:" + editCount + "}}" + "}}"
 				+ "|{{speedy|Outdated report, which was replaced by "
 				+ "a fresh one through [[user:{{subst:REVISIONUSER}}]].}}|}}"
 				+ "\nLast update: {{subst:#time:d F Y}}." + "\n"
@@ -430,7 +430,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.09.21";
+	public static final String VERSION = "v15.09.22";
 
 	public static void main(String[] args) {
 

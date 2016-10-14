@@ -1339,7 +1339,7 @@ public class Wiki implements Serializable
     {
         return getPageInfo(new String[] { page })[0];
     }
-    
+
     /**
      * If the page is a redirect
      * @param page the page to examine
@@ -1348,11 +1348,11 @@ public class Wiki implements Serializable
      */
     public boolean isRedirect(String page) throws IOException
     {
-    	String url = query+"prop=info&inprop=displaytitle&titles="+URLEncoder.encode(page, "UTF-8");
-    	String line = fetch(url,"isRedirect");
-    	return line.contains("redirect=\"\"");
+        String url = query + "prop=info&inprop=displaytitle&titles=" + encode(page, true);
+        String line = fetch(url, "isRedirect");
+        return line.contains("redirect=\"\"");
     }
-    
+
     /**
      *  Gets miscellaneous page info. Returns:
      *  <ul>

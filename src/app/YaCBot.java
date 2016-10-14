@@ -1,6 +1,8 @@
 package app;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.HttpRetryException;
 import java.util.logging.Level;
 
@@ -15,11 +17,10 @@ public class YaCBot {
 	private static final String VERSION = "v15.12.08";
 
 	public static void main(String[] args) {
-
-		char[] password = passwordDialog(args);
-
-		Wiki commons = new Wiki("commons.wikimedia.org");
 		try {
+			char[] password = passwordDialog(args);
+			Wiki commons = new Wiki("commons.wikimedia.org");
+
 			commons.login(args[0], password);
 			password = null;
 			// Minimum time between edits in ms
@@ -42,8 +43,10 @@ public class YaCBot {
 	 * @param args
 	 *            the command line arguments
 	 * @return the password
+	 * @throws IOException
+	 *             If an I/O error occurs
 	 */
-	private static char[] passwordDialog(String[] args) {
+	private static char[] passwordDialog(String[] args) throws IOException {
 
 		System.out.println(VERSION);
 
@@ -62,6 +65,9 @@ public class YaCBot {
 			System.exit(-1);
 		}
 		System.out.println("Please type in the password for " + args[0] + ".");
+		if (System.console() == null) {
+			return (new BufferedReader(new InputStreamReader(System.in))).readLine().toCharArray();
+		}
 		return System.console().readPassword();
 	}
 

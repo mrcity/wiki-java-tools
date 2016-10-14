@@ -41,10 +41,11 @@ public class WikiPage {
 	 * @param name
 	 *            The name of the page with prefix (e.g. "File:", "Category:",
 	 *            ...)
+	 * @throws IOException
+	 *             if a network error occurs
 	 */
-	public WikiPage(Wiki wiki, String name, CategoryCreator catGen)
-			throws IOException {
-		this.isFile = name.split(":", 2)[0].toLowerCase().equals("file");
+	public WikiPage(Wiki wiki, String name, CategoryCreator catGen) throws IOException {
+		this.isFile = wiki.namespace(name) == Wiki.FILE_NAMESPACE;
 		// this.isRedirect = wiki.isRedirect( fname );
 		this.wiki = wiki;
 		this.catGen = catGen;

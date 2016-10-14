@@ -371,10 +371,7 @@ class TopBotThread extends Thread {
 		String title = "Top " + TopBot.TARGET_COUNT + " "
 				+ WikiPage.firstCharToLowerCase(categoryName);
 		String[] splittedText = { "" };
-		try {
-			splittedText = wiki.getPageText(title).split(TopBot.SEPARATOR);
-		} catch (FileNotFoundException ignore) {
-		}
+		splittedText = wiki.getPageText(title).split(TopBot.SEPARATOR);
 		wiki.edit(title, (splittedText.length == 1 ? "" : splittedText[0])
 				+ TopBot.SEPARATOR + "\n" + text,
 				"Update by " + TopBot.BOT_NAME + " " + TopBot.VERSION + " (Scanned " + members.size() + " files)");
@@ -430,7 +427,7 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v16.10.03";
+	public static final String VERSION = "v16.10.04";
 	public static final String BOT_NAME = "TopBot";
 
 	public static void main(String[] args) {

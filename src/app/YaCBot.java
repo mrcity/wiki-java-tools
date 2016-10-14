@@ -14,7 +14,8 @@ import wiki.Wiki;
 import wiki.WikiPage;
 
 public class YaCBot {
-	private static final String VERSION = "v15.12.08";
+	private static final String TOOL_NAME = "YaCBot";
+	private static final String VERSION = "v16.10.08";
 
 	public static void main(String[] args) {
 		try {
@@ -47,7 +48,7 @@ public class YaCBot {
 	 *             If an I/O error occurs
 	 */
 	private static char[] passwordDialog(String[] args) throws IOException {
-
+		System.out.println(TOOL_NAME);
 		System.out.println(VERSION);
 
 		String[] expectedArgs = { "username", "continueKey" };

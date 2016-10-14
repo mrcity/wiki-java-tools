@@ -1,0 +1,19 @@
+<project default="topbot_jar" name="Create Runnable Jar for TopBot">
+	<property name="dir.src" value="src" />
+	<property name="dir.build" value="ant_build" />
+
+	<target name="compile">
+		<delete dir="${dir.build}" />
+		<mkdir dir="${dir.build}" />
+		<javac srcdir="${dir.src}" destdir="${dir.build}" />
+	</target>
+	<target name="topbot_jar" depends="compile">
+		<jar destfile="topbot.jar" filesetmanifest="mergewithoutmain">
+			<manifest>
+				<attribute name="Main-Class" value="app.TopBot" />
+				<attribute name="Class-Path" value="." />
+			</manifest>
+			<fileset dir="${dir.build}" />
+		</jar>
+	</target>
+</project>

@@ -1,7 +1,6 @@
 package app;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Arrays;
@@ -504,9 +503,7 @@ public class TopBot {
 		}
 		System.out.println("Please type in the password for " + args[0] + ".");
 		if (System.console() == null) {
-			// default to stderr; does NOT echo characters... not sure why
-			return (new BufferedReader(new InputStreamReader(System.in)))
-					.readLine().toCharArray();
+			return (new BufferedReader(new InputStreamReader(System.in))).readLine().toCharArray();
 		}
 		return System.console().readPassword();
 	}

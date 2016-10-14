@@ -26,12 +26,14 @@ public class GIFburner extends App {
 	static String optiPNGexe;
 	final static String COMMONS_DELINKER_PAGE = "User:CommonsDelinker/commands";
 	final static int WAIT_AFTER_COMDEL_REQUEST = 15; // in minutes
-	final static String VERSION = "v15.07.05";
+	final static String VERSION = "v15.08.18";
 
 	static String linkList = "";
 	static Queue<String> deleteQueue = new LinkedList<>();
 
 	public static void main(String[] args) throws IOException {
+
+		System.exit(-1); // not approved/tested
 
 		char[] password = passwordDialog(args);
 

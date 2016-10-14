@@ -9,7 +9,8 @@ import wiki.Wiki;
 
 public class Upload {
 
-	public static final String VERSION = "v15.05.05";
+	public static final String VERSION = "v16.10.05";
+	public static final String PROGRAM_NAME = "FolderReUp";
 
 	public static void main(String[] args) throws IOException, LoginException {
 
@@ -75,8 +76,8 @@ public class Upload {
 			} else {
 				System.out.println("Uploading " + fileEntry.getName());
 				// TODO catch exceptions
-				wiki.upload(fileEntry, fileEntry.getName(), "", comment
-						+ " (Uploaded new version of file using Wiki.java)");
+				wiki.upload(fileEntry, fileEntry.getName(), "",
+						comment + " (Uploaded new version of file using " + PROGRAM_NAME + " " + VERSION + ")");
 			}
 		}
 	}

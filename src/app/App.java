@@ -20,11 +20,11 @@ interface WikiAPI {
 public class App {
 	private static int exceptionCount = 0;
 	protected static final int MAX_FAILS = 3;
-	protected static final int EXCEPTION_SLEEP_TIME = 30 * 1000; // ms
+	protected static final int MAX_EXCEPTION_SLEEP_TIME = 30 * 1000; // ms
 
 	/**
 	 * Attempt to fetch from the given api a maximum of maxFails and wait some
-	 * time (max EXCEPTION_SLEEP_TIME) between tries.
+	 * time (at most maxExceptionSleepTime) between tries.
 	 * 
 	 * @param api
 	 *            the API to fetch from

@@ -174,14 +174,14 @@ public class Flock extends App {
 			public Object fetch() throws IOException, LoginException {
 				return wiki.listRecentUploads(DAYS_BEGIN, DAYS_END);
 			}
-		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 		System.out.println("Fetching all page texts");
 		final String[] membersText = (String[]) attemptFetch(new WikiAPI() {
 			@Override
 			public Object fetch() throws IOException, LoginException {
 				return wiki.getPageText(members);
 			}
-		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 		for (int j = 0; j < members.length; ++j) {
 			final int i = j;
 			System.out.println(i + " of " + members.length + " done. (Next: "
@@ -218,7 +218,7 @@ public class Flock extends App {
 										wiki);
 								return null;
 							}
-						}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+						}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 					break;
 				}
 			}
@@ -268,7 +268,7 @@ public class Flock extends App {
 			public Object fetch() throws IOException, LoginException {
 				return wiki.getPageText(talkPageTitle);
 			}
-		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 		attemptFetch(new WikiAPI() {
 
 			@Override
@@ -277,7 +277,7 @@ public class Flock extends App {
 						+ BOT_NAME + " " + VERSION);
 				return null;
 			}
-		}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+		}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 		System.out.println();
 	}
 
@@ -331,7 +331,7 @@ public class Flock extends App {
 			public Object fetch() throws IOException, LoginException {
 				return wiki.getCategories(filepage, false, false);
 			}
-		}, MAX_FAILS, EXCEPTION_SLEEP_TIME)) {
+		}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME)) {
 			if (cat.contains("Items with OTRS permission confirmed")) {
 				validLicence = true;
 				break;

@@ -11,7 +11,7 @@ Download the source and build with ```ant```.
 Execute with ```java -jar gifburner.jar```
 
 ## Issues
-Please [report](https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=Template%3A) any issues with the code.
+Please [report](https://github.com/MarcoFalke/wiki-java-tools/issues/new?title=GIFburner%3A) any issues with the code.
 
 ## License
 [GPLv3+](COPYING.GPL)

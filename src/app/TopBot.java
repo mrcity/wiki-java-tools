@@ -311,7 +311,7 @@ class TopBotThread extends Thread {
 					System.out.println(name + "   END");
 					return null;
 				}
-			}, App.MAX_FAILS, App.EXCEPTION_SLEEP_TIME);
+			}, App.MAX_FAILS, App.MAX_EXCEPTION_SLEEP_TIME);
 
 			logger.add(this.getName() + " shut down successfully.");
 		} catch (LoginException | IOException e) {
@@ -376,8 +376,8 @@ class TopBotThread extends Thread {
 		} catch (FileNotFoundException ignore) {
 		}
 		wiki.edit(title, (splittedText.length == 1 ? "" : splittedText[0])
-				+ TopBot.SEPARATOR + "\n" + text, "Update by Bot "
-				+ TopBot.VERSION + " (Scanned " + members.size() + " files)");
+				+ TopBot.SEPARATOR + "\n" + text,
+				"Update by " + TopBot.BOT_NAME + " " + TopBot.VERSION + " (Scanned " + members.size() + " files)");
 	}
 
 	/**
@@ -430,7 +430,8 @@ public class TopBot {
 	public static final int TARGET_COUNT = 200;
 
 	public static final String SEPARATOR = "<!-- Only text ABOVE this line will be preserved on updates -->";
-	public static final String VERSION = "v15.09.22";
+	public static final String VERSION = "v16.10.02";
+	public static final String BOT_NAME = "TopBot";
 
 	public static void main(String[] args) {
 
@@ -490,6 +491,7 @@ public class TopBot {
 	 * @throws IOException 
 	 */
 	private static char[] passwordDialog(String[] args) throws IOException {
+		System.out.println(BOT_NAME);
 		System.out.println(VERSION);
 
 		String[] expectedArgs = { "username" };

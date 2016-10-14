@@ -5139,7 +5139,7 @@ public class Wiki implements Serializable
     /**
      * Return the next batch of files ...
      *  
-     * @param continueKey the file to continue from 
+     * @param continueKey the file to continue from or the empty string
      * @param amount the amount of file names to return
      * @return an object containing all file names of the batch
      * request and the file to continue from
@@ -5148,7 +5148,7 @@ public class Wiki implements Serializable
     public Object[] listAllFiles(String continueKey, int amount) throws IOException
     {
         StringBuilder url = new StringBuilder(query);
-        url.append("list=allpages&apcontinue=" + URLEncoder.encode(continueKey, "UTF-8") + "&apnamespace=6&apfilterredir=nonredirects&aplimit=" + amount);
+        url.append("list=allpages&apcontinue=" + encode(continueKey, false) + "&apnamespace=6&apfilterredir=nonredirects&aplimit=" + amount);
         String line = fetch(url.toString(), "listAllFiles");
 
         ArrayList<String> members = new ArrayList<String>();

@@ -1,9 +1,11 @@
 package app;
 
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -85,8 +87,10 @@ public class GIFburner extends App {
 	 * @param args
 	 *            the command line arguments
 	 * @return the password
+	 * @throws IOException
+	 *             If an I/O error occurs
 	 */
-	private static char[] passwordDialog(String[] args) {
+	private static char[] passwordDialog(String[] args) throws IOException {
 
 		System.out.println(VERSION);
 
@@ -105,6 +109,9 @@ public class GIFburner extends App {
 			System.exit(-1);
 		}
 		System.out.println("Please type in the password for " + args[0] + ".");
+		if (System.console() == null) {
+			return (new BufferedReader(new InputStreamReader(System.in))).readLine().toCharArray();
+		}
 		return System.console().readPassword();
 	}
 

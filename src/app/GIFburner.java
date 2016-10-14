@@ -138,7 +138,7 @@ public class GIFburner extends App {
 				public Object fetch() throws IOException {
 					return commons.getFileMetadata(source.getName()).toString();
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 			if (!metadata.contains("mime=image/gif")) {
 				System.out.println("Skip: " + source.getName()
 						+ " (Not image/gif)");
@@ -152,7 +152,7 @@ public class GIFburner extends App {
 					public Object fetch() throws IOException {
 						return commons.getImageHistory(source.getName());
 					}
-				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+				}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 				if (log.length > 1) {
 					System.out.println("Skip: " + source.getName()
 							+ " (More than one revision)");
@@ -165,7 +165,7 @@ public class GIFburner extends App {
 					public Object fetch() throws IOException {
 						return commons.getImage(source.getName(), GIFtemp);
 					}
-				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+				}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 				if (!downloaded) {
 					throw new RuntimeException(source.getName()
 							+ "does not exist anymore!");
@@ -276,7 +276,7 @@ public class GIFburner extends App {
 										+ "]]). " + issue);
 						return null;
 					}
-				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+				}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 
 				zopfliPngFile.delete();
 				optiPngFile.delete();
@@ -302,7 +302,7 @@ public class GIFburner extends App {
 										+ issue);
 						return null;
 					}
-				}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+				}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 
 				deleteQueue.add(source.getName() + "|" + filename);
 				replaceViaDelinkerAndProcessDupes("{{universal replace|"
@@ -394,7 +394,7 @@ public class GIFburner extends App {
 							+ "]].");
 					return null;
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 			attemptFetch(new WikiAPI() {
 
 				@Override
@@ -404,7 +404,7 @@ public class GIFburner extends App {
 									+ "|duplicate file]].");
 					return null;
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 
 		}
 	}
@@ -443,7 +443,7 @@ public class GIFburner extends App {
 				public Object fetch() throws IOException, LoginException {
 					return commons.getPageText(COMMONS_DELINKER_PAGE);
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 			attemptFetch(new WikiAPI() {
 
 				@Override
@@ -453,7 +453,7 @@ public class GIFburner extends App {
 							+ replaceCounter + " GIFs by exact PNG duplicates.");
 					return null;
 				}
-			}, MAX_FAILS, EXCEPTION_SLEEP_TIME);
+			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
 			replaceCounter = 0;
 			replaceCOMDEL = "";
 			// Also delete

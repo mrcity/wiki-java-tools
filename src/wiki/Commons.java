@@ -105,6 +105,8 @@ public class Commons {
 					CASE_INSENSITIVE
 							+ "(\\=+\\s*\\{\\{\\s*original[ _]+upload[ _]+log\\s*\\}\\}\\s*\\=+\\s*)(\\{\\{\\s*original[ _]+description[ _]+page *\\|\\s*([a-z\\-]+\\.w[a-z]+)\\s*\\|\\s*[^}\\|\\[{]+\\}\\})\\s*using\\s*\\[\\[\\:en\\:WP\\:FTCG\\|FtCG\\]\\]\\.?",
 					"$1{{transferred from|$3||[[:en:WP:FTCG|FtCG]]}} $2" } };
+	public static final String[][] UPLOAD_WIZARD_REGEX = {
+			{ "\\[\\[Category\\:(u|U)ploaded with UploadWizard\\]\\]", "" } };
 	public static final String[][] REDUNDANT_REGEX = {
 			{
 					CASE_INSENSITIVE

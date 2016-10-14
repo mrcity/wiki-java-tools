@@ -1341,19 +1341,6 @@ public class Wiki implements Serializable
     }
 
     /**
-     * If the page is a redirect
-     * @param page the page to examine
-     * @return true if the page is a redirect
-     * @throws IOException 
-     */
-    public boolean isRedirect(String page) throws IOException
-    {
-        String url = query + "prop=info&inprop=displaytitle&titles=" + encode(page, true);
-        String line = fetch(url, "isRedirect");
-        return line.contains("redirect=\"\"");
-    }
-
-    /**
      *  Gets miscellaneous page info. Returns:
      *  <ul>
      *  <li><b>displaytitle</b>: (String) the title of the page that is actually

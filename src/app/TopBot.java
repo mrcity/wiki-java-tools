@@ -528,9 +528,9 @@ public class TopBot {
 	 */
 	private static CategoryTree generateCategoryTree(String root, Wiki wiki)
 			throws IOException {
-		String[] childrenStrings = wiki.getCategoryMembers(root, 0,
+		String[] childrenStrings = wiki.getCategoryMembers(root, false,
 				new int[] { Wiki.CATEGORY_NAMESPACE });
-		String[] rootMembers = wiki.getCategoryMembers(root, 0,
+		String[] rootMembers = wiki.getCategoryMembers(root, false,
 				new int[] { Wiki.FILE_NAMESPACE });
 
 		// count number of kids

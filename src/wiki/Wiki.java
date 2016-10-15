@@ -1441,15 +1441,6 @@ public class Wiki implements Serializable
                 tempmap.put("displaytitle", parseAttribute(item, "displaytitle", 0));
                 tempmap.put("timestamp", makeCalendar());
 
-                // DEPRECATED, will be removed shortly
-                tempmap.put("token", parseAttribute(item, "edittoken", 0)); 
-                // watchlist token
-                if (user != null)
-                {
-                    tempmap.put("watchtoken", parseAttribute(item, "watchtoken", 0));
-                    logger.log(Level.WARNING, "getPageInfo: watchtoken and editoken are deprecated and will be removed shortly.");
-                }
-
                 // number of watchers
                 if (item.contains("watchers=\""))
                     tempmap.put("watchers", Integer.parseInt(parseAttribute(item, "watchers", 0)));

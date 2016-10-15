@@ -15,7 +15,7 @@ import wiki.WikiPage;
 
 public class YaCBot {
 	private static final String TOOL_NAME = "YaCBot";
-	private static final String VERSION = "v16.10.09";
+	private static final String VERSION = "v16.10.11";
 
 	public static void main(String[] args) {
 		try {

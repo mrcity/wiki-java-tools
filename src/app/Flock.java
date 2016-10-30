@@ -92,7 +92,7 @@ public class Flock extends App {
 	static int skipped = 0;
 	static int checkNeededCount = 0;
 	static final String BOT_NAME = "Flock";
-	static final String VERSION = "v16.10.04";
+	static final String VERSION = "v16.10.24";
 
 	final static String MAINTAINER = "McZusatz";
 	final static int MAX_TEXT_LENGTH = 60000;
@@ -122,6 +122,7 @@ public class Flock extends App {
 			e.printStackTrace();
 			if (checkNeeded.length() > 0)
 				System.out.println("\nNeeds check:\n" + checkNeeded);
+			System.exit(1);;
 		}
 	}
 

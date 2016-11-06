@@ -173,7 +173,7 @@ public class WikiPage {
 				// https://commons.wikimedia.org/wiki/Commons:Regex#Junk_cleanup
 				cleanText = regexCleaner(textPart, Commons.UPLOAD_WIZARD_REGEX, false);
 				if (!(textPart.equals(cleanText))) {
-					// appendToEditSummary("Removing [[Special:Redirect/revision/209344599|deleted category]]. ");
+					appendToEditSummary("Removing [[Special:Redirect/revision/209344599|phased out category]]. ");
 					textPart = cleanText;
 				}
 			}

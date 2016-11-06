@@ -1623,7 +1623,7 @@ public class Wiki implements Serializable
         for (String title : titles)
             if (namespace(title) < 0)
                 throw new UnsupportedOperationException("Cannot retrieve \"" + title + "\": namespace < 0.");
-        String[] ret = new String[titles.length];
+        HashMap<String, String> pageTexts = new HashMap<String, String>(2 * titles.length);
         String url = query + "prop=revisions&rvprop=content&titles=";
         
         for (String chunk : constructTitleString(titles, true))
@@ -1644,12 +1644,16 @@ public class Wiki implements Serializable
                     text = decode(results[i].substring(y, z));
                 }
                 
-                // place the result into the return array
-                for (int j = 0; j < titles.length; j++)
-                    if (normalize(titles[j]).equals(parsedtitle))
-                        ret[j] = text;
+                // store result for later
+                pageTexts.put(parsedtitle, text);
             }
         }
+
+        String[] ret = new String[titles.length];
+        // returned array is in the same order as input array
+        for (int j = 0; j < titles.length; j++)
+            ret[j] = pageTexts.get(normalize(titles[j]));
+
         log(Level.INFO, "getPageText", "Successfully retrieved text of " + titles.length + " pages.");
         return ret;
     }
@@ -5509,12 +5513,12 @@ public class Wiki implements Serializable
         }
 
         // check for start/end dates
-        String lestart = ""; // we need to account for lestart being the continuation parameter too.
         if (start != null)
         {
             if (end != null && start.before(end)) //aargh
                 throw new IllegalArgumentException("Specified start date is before specified end date!");
-            lestart = calendarToTimestamp(start);
+            url.append("&lestart=");
+            url.append(calendarToTimestamp(start));
         }
         if (end != null)
         {
@@ -5523,26 +5527,23 @@ public class Wiki implements Serializable
         }
 
         // only now we can actually start to retrieve the logs
+        String lecontinue = null;
         List<LogEntry> entries = new ArrayList<>(6667); // should be enough
         do
         {
-            String line = fetch(url.toString() + "&lestart=" + lestart, "getLogEntries");
-            lestart = parseAttribute(line, "lestart", 0);
+            String line;
+            if (lecontinue == null)
+                line = fetch(url.toString(), "getLogEntries");
+            else
+                line = fetch(url.toString() + "&lecontinue=" + lecontinue, "getLogEntries");
+            lecontinue = parseAttribute(line, "lecontinue", 0);
 
             // parse xml. We need to repeat the test because the XML may contain more than the required amount.
-            while (line.contains("<item") && entries.size() < amount)
-            {
-                // find entry
-                int a = line.indexOf("<item");
-                // end may be " />" or "</item>", followed by next item
-                int b = line.indexOf("><item", a);
-                if (b < 0) // last entry
-                    b = line.length();
-                entries.add(parseLogEntry(line.substring(a, b)));
-                line = line.substring(b);
-            }
+            String[] items = line.split("<item ");
+            for (int i = 1; i < items.length && entries.size() < amount; i++)
+                entries.add(parseLogEntry(items[i]));
         }
-        while (entries.size() < amount && lestart != null);
+        while (entries.size() < amount && lecontinue != null);
 
         // log the success
         StringBuilder console = new StringBuilder("Successfully retrieved log (type=");
@@ -5570,15 +5571,15 @@ public class Wiki implements Serializable
     {
         // note that we can override these in the calling method
         String type = "", action = "";
+        boolean actionhidden = xml.contains("actionhidden=\"");
         if (xml.contains("type=\"")) // only getLogEntries
         {
             type = parseAttribute(xml, "type", 0);
-            if (!xml.contains("actionhidden=\"")) // not oversighted
-                action = parseAttribute(xml, "action", 0);
+            action = parseAttribute(xml, "action", 0);
         }
 
         // reason
-        String reason = null;
+        String reason;
         boolean reasonhidden = xml.contains("commenthidden=\"");
         if (type.equals(USER_CREATION_LOG)) // there is no reason for creating a user
             reason = "";
@@ -5657,6 +5658,7 @@ public class Wiki implements Serializable
         LogEntry le = new LogEntry(type, action, reason, performer, target, timestamp, details);
         le.userDeleted = userhidden;
         le.reasonDeleted = reasonhidden;
+        le.targetDeleted = actionhidden;
         return le;
     }
 
@@ -6464,7 +6466,8 @@ public class Wiki implements Serializable
         private String target;
         private Calendar timestamp;
         private Object details;
-        private boolean reasonDeleted = false, userDeleted = false;
+        private boolean reasonDeleted = false, userDeleted = false, 
+            targetDeleted = false;
 
         /**
          *  Creates a new log entry. WARNING: does not perform the action
@@ -6514,6 +6517,17 @@ public class Wiki implements Serializable
         public String getAction()
         {
             return action;
+        }
+        
+        /**
+         *  Returns true if the target has been RevisionDeleted (action is hidden
+         *  in the GUI but retrievable by the API).
+         *  @return (see above)
+         *  @since 0.32
+         */
+        public boolean isTargetDeleted()
+        {
+            return targetDeleted;
         }
 
         /**
@@ -7427,14 +7441,15 @@ public class Wiki implements Serializable
      */
     protected synchronized boolean checkLag(URLConnection connection)
     {
-        // check lag
         int lag = connection.getHeaderFieldInt("X-Database-Lag", -5);
-        if (lag > maxlag)
+        // X-Database-Lag is integer, so a lag of 1.972 gives X-Database-Lag == 1
+        // Thus, we need to retry in case of equality:
+        if (lag >= maxlag)
         {
             try
             {
                 int time = connection.getHeaderFieldInt("Retry-After", 10);
-                logger.log(Level.WARNING, "Current database lag {0} s exceeds {1} s, waiting {2} s.", new Object[] { lag, maxlag, time });
+                logger.log(Level.WARNING, "Current database lag {0} s violates maxlag of {1} s, waiting {2} s.", new Object[] { lag, maxlag, time });
                 Thread.sleep(time * 1000);
             }
             catch (InterruptedException ex)

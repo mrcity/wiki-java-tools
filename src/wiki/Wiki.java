@@ -458,13 +458,11 @@ public class Wiki implements Serializable
     // time for the read to take place. (needs to be longer, some connections are slow
     // and the data volume is large!)
     private static final int CONNECTION_READ_TIMEOUT_MSEC = 180000; // 180 seconds
-    // number of retries when using fetch()
-    private static final int FETCH_ATTEMPTS = 2;
     // log2(upload chunk size). Default = 22 => upload size = 4 MB. Disable
     // chunked uploads by setting a large value here (50 = 1 PB will do).
     private static final int LOG2_CHUNK_SIZE = 22;
     // maximum URL length in bytes
-    private static final int URL_LENGTH_LIMIT = 8192;
+    private static final int URL_LENGTH_LIMIT = 7500;
 
     // CONSTRUCTORS AND CONFIGURATION
 
@@ -1382,7 +1380,7 @@ public class Wiki implements Serializable
         url.append("prop=info&intoken=edit%7Cwatch&inprop=protection%7Cdisplaytitle%7Cwatchers&titles=");
         for (String temp : constructTitleString(pages, true))
         {
-            String line = fetch(url.toString() + temp, "getPageInfo", FETCH_ATTEMPTS);
+            String line = fetch(url.toString() + temp, "getPageInfo");
 
             // form: <page pageid="239098" ns="0" title="BitTorrent" ... >
             // <protection />
@@ -1636,12 +1634,12 @@ public class Wiki implements Serializable
         for (String title : titles)
             if (namespace(title) < 0)
                 throw new UnsupportedOperationException("Cannot retrieve \"" + title + "\": namespace < 0.");
-        HashMap<String, String> pageTexts = new HashMap<String,String>(2 * titles.length);
+        String[] ret = new String[titles.length];
         String url = query + "prop=revisions&rvprop=content&titles=";
         
         for (String chunk : constructTitleString(titles, true))
         {
-            String[] results = fetch(url + chunk, "getPageText", FETCH_ATTEMPTS).split("<page ");
+            String[] results = fetch(url + chunk, "getPageText").split("<page ");
 
             // skip first element to remove front crud
             for (int i = 1; i < results.length; i++)
@@ -1657,16 +1655,12 @@ public class Wiki implements Serializable
                     text = decode(results[i].substring(y, z));
                 }
                 
-                // store result for later
-                pageTexts.put(parsedtitle, text);
+                // place the result into the return array
+                for (int j = 0; j < titles.length; j++)
+                    if (normalize(titles[j]).equals(parsedtitle))
+                        ret[j] = text;
             }
         }
-
-        String[] ret = new String[titles.length];
-        // returned array is in the same order as input array
-        for (int j = 0; j < titles.length; j++)
-            ret[j] = pageTexts.remove(normalize(titles[j]));
-
         log(Level.INFO, "getPageText", "Successfully retrieved text of " + titles.length + " pages.");
         return ret;
     }
@@ -2328,9 +2322,9 @@ public class Wiki implements Serializable
             {
                 String line;
                 if (tlcontinue == null)
-                    line = fetch(tempurl, "getTemplates", FETCH_ATTEMPTS);
+                    line = fetch(tempurl, "getTemplates");
                 else
-                    line = fetch(tempurl + "&tlcontinue=" + encode(tlcontinue, false), "getTemplates", FETCH_ATTEMPTS);
+                    line = fetch(tempurl + "&tlcontinue=" + encode(tlcontinue, false), "getTemplates");
                 tlcontinue = parseAttribute(line, "tlcontinue", 0);
                 
                 // Split the result into individual listings for each article.
@@ -7331,50 +7325,6 @@ public class Wiki implements Serializable
     }
 
     /**
-     *  A generic URL content fetcher. This is only useful for GET requests,
-     *  which is almost everything that doesn't modify the wiki. Might be
-     *  useful for subclasses.
-     *
-     *  Here we also check the database lag and wait if it exceeds
-     *  <tt>maxlag</tt>, see <a href="https://mediawiki.org/wiki/Manual:Maxlag_parameter">
-     *  here</a> for how this works.
-     *
-     *  @param url the url to fetch
-     *  @param caller the caller of this method
-     *  @param attempts How often to try before the IOException is thrown
-     *  @return the content of the fetched URL
-     *  @throws IOException if a network error occurs
-     *  @throws AssertionError if assert=user|bot fails
-     *  @since 0.32
-     */
-    protected String fetch(String url, String caller, int attempts) throws IOException
-    {
-        --attempts;
-        try
-        {
-            return fetch(url, caller);
-        }
-        catch (IOException e)
-        {
-            if (attempts <= 0)
-            {
-                throw e;
-            }
-            else
-            {
-                try
-                {
-                    Thread.sleep(10 * 1000L);
-                }
-                catch (InterruptedException ignore)
-                {
-                }
-                return fetch(url, caller, attempts);
-            }
-        }
-    }
-
-    /**
      *  Does a text-only HTTP POST.
      *  @param url the url to post to
      *  @param text the text to post
@@ -7506,10 +7456,9 @@ public class Wiki implements Serializable
      */
     protected synchronized boolean checkLag(URLConnection connection)
     {
+        // check lag
         int lag = connection.getHeaderFieldInt("X-Database-Lag", -5);
-        // X-Database-Lag is integer, so a lag of 1.972 gives X-Database-Lag == 1
-        // Thus, we need to retry in case of equality:
-        if (lag >= maxlag)
+        if (lag > maxlag)
         {
             try
             {
@@ -7694,34 +7643,33 @@ public class Wiki implements Serializable
     protected String[] constructTitleString(String[] titles, boolean limit) throws IOException
     {
         // sort and remove duplicates per [[mw:API]]
-        Set<String> set = new TreeSet<>();
+        Set<String> blah = new TreeSet<>();
         for (String title : titles)
-            set.add(encode(title, true));
-        String[] titlesEnc = set.toArray(new String[set.size()]);
+            blah.add(normalize(title));
+        String[] temp = blah.toArray(new String[blah.size()]);
 
         // actually construct the string
-        String titleStringToken = encode("|", false);
         ArrayList<String> ret = new ArrayList<>();
         StringBuilder buffer = new StringBuilder();
-        buffer.append(titlesEnc[0]);
-        int num = 1;
-        for (int i = num; i < titlesEnc.length; i++)
+        for (int i = 0; i < temp.length; i++)
         {
-            if (num < slowmax && // Assume the base url takes 400 bytes
-                buffer.length() + titleStringToken.length() + titlesEnc[i].length() < URL_LENGTH_LIMIT - 400)
+            buffer.append(temp[i]);
+            if (i == temp.length - 1 || (i % slowmax == slowmax - 1) 
+                || (limit && buffer.length() > URL_LENGTH_LIMIT))
             {
-                buffer.append(titleStringToken);
+                ret.add(encode(buffer.toString(), false));
+                buffer.setLength(0);
             }
             else
-            {
-                ret.add(buffer.toString());
-                buffer.setLength(0);
-                num = 0;
-            }
-            buffer.append(titlesEnc[i]);
-            ++num;
+                buffer.append("|");
         }
-        ret.add(buffer.toString());
+        // JDK 1.8:
+        // StringJoiner sj = new StringJoiner("|");
+        // for (int i = 0; i < temp.length; i++)
+        // {
+        //     sj.add(normalize(temp[i]));
+        //     statement of if above, removing else
+        // }
         return ret.toArray(new String[ret.size()]);
     }
 

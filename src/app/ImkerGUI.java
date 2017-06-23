@@ -52,12 +52,15 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import wiki.Wiki;
 
@@ -79,6 +82,8 @@ public class ImkerGUI extends ImkerBase {
 	private final JRadioButton CATEGORY_BUTTON = new JRadioButton(
 			MSGS.getString("Text_Category"));
 	private final JTextField STATUS_TEXT_FIELD = new JTextField(45);
+        private final JSlider IMGS_TO_DOWNLOAD_SLIDER = new JSlider(
+                        JSlider.HORIZONTAL, 0, 0, 0);
 	private State state = State.PRE_INIT;
 	private boolean hasSource = false;
 	private boolean hasTarget = false;
@@ -170,6 +175,9 @@ public class ImkerGUI extends ImkerBase {
 				MSGS.getString("Prompt_Download"), getFileNames().length));
 		MAIN_BUTTON.setText(String.format(MSGS.getString("Button_Download"),
 				getFileNames().length));
+		IMGS_TO_DOWNLOAD_SLIDER.setMaximum(getFileNames().length);
+		IMGS_TO_DOWNLOAD_SLIDER.setValue(getFileNames().length);
+		IMGS_TO_DOWNLOAD_SLIDER.setEnabled(true);
 		state = State.PRE_DOWNLOAD;
 	}
 
@@ -353,38 +361,46 @@ public class ImkerGUI extends ImkerBase {
 	 * @throws Throwable
 	 */
 	private void download() throws Throwable {
+		IMGS_TO_DOWNLOAD_SLIDER.setEnabled(false);
+		// TODO REMOVE, make a UI for this
+		setStartingIndex(0);
+		setDownloadCount(IMGS_TO_DOWNLOAD_SLIDER.getValue());
+		setMaxToMiss(getFileNames().length - getDownloadCount());
+		setRandomThreshold(1.0 * getDownloadCount() / (getFileNames().length - getStartingIndex()));
+
 		final JProgressBar progressBarDownload = new JProgressBar(0,
-				getFileNames().length);
+				getDownloadCount());
 		progressBarDownload.setStringPainted(true);
 		executeWorker(MSGS.getString("Status_Downloading"),
 				MSGS.getString("Hint_Downloading"), progressBarDownload,
 				MSGS.getString("Text_Exit"), new SwingWorker<Void, Void>() {
 
+			@Override
+			protected Void doInBackground()
+					throws FileNotFoundException, IOException,
+					LoginException {
+				downloadLoop(new StatusHandler() {
+
 					@Override
-					protected Void doInBackground()
-							throws FileNotFoundException, IOException,
-							LoginException {
-						downloadLoop(new StatusHandler() {
-
-							@Override
-							public void handle(int i, String fileName) {
-								progressBarDownload.setValue(i);
-								STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/"
-										+ getFileNames().length + "): "
-										+ fileName);
-							}
-
-							@Override
-							public void handleConclusion(String status) {
-								// TODO invisible (instant redraw)
-								// STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
-								// .getText() + status);
-							}
-
-						});
-						return null;
+					public void handle(int i, String fileName) {
+						progressBarDownload.setValue(i);
+						progressBarDownload.setMaximum(getDownloadCount());
+						STATUS_TEXT_FIELD.setText("(" + (i + 1) + "/"
+								+ getDownloadCount() + "): "
+								+ fileName);
 					}
+
+					@Override
+					public void handleConclusion(String status) {
+						// TODO invisible (instant redraw)
+						// STATUS_TEXT_FIELD.setText(STATUS_TEXT_FIELD
+						// .getText() + status);
+					}
+
 				});
+				return null;
+			}
+		});
 		// TODO invisible (instantly overwritten by verifyCheckSum()
 		// STATUS_TEXT_FIELD.setText(MSGS.getString("Status_Download_Complete"));
 		// MAIN_BUTTON.setText(MSGS.getString("Button_Reset"));
@@ -825,6 +841,34 @@ public class ImkerGUI extends ImkerBase {
 		boxPane.add(description);
 	}
 
+	/**
+	 * Add the download quantity slider to the GUI
+	 * 
+	 * @param boxPane
+	 *            the GUI container
+	 */
+	private void addSlider(Container boxPane) {
+		IMGS_TO_DOWNLOAD_SLIDER.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(ChangeEvent event) {
+				if (state == State.PRE_DOWNLOAD) {
+					Object source = event.getSource();
+					if (source instanceof JSlider) {
+						JSlider theJSlider = (JSlider) source;
+						STATUS_TEXT_FIELD.setText(String.format(
+								MSGS.getString("Prompt_Download"), theJSlider.getValue()));
+						MAIN_BUTTON.setText(String.format(MSGS.getString("Button_Download"),
+								theJSlider.getValue()));
+					}
+				}
+			}
+		});
+		JPanel qtyChooserPanel = new JPanel(new FlowLayout());
+		qtyChooserPanel.add(IMGS_TO_DOWNLOAD_SLIDER);
+		boxPane.add(qtyChooserPanel);
+	}
+
 	private void popupPreferences() {
 		JPanel wikiDomain = new JPanel(new FlowLayout());
 		final JTextField wikiDomainField;
@@ -912,6 +956,9 @@ public class ImkerGUI extends ImkerBase {
 		boxPane.add(Box.createVerticalStrut(GAP));
 		addOutputBox(boxPane);
 		boxPane.add(Box.createVerticalStrut(GAP));
+
+		// Slider
+		addSlider(boxPane);
 
 		// Action button
 		addActionButton(boxPane);

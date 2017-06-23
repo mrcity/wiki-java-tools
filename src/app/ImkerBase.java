@@ -55,11 +55,16 @@ public abstract class ImkerBase extends App {
 	private static final String FOLDER_WINDOWS_ENCODED_FILES = "invalid_names_encoded";
 	private Wiki wiki;
 	private File outputFolder;
+	private double randomThreshold;
 	// Variables only valid for one round; Need invalidation {
 	private String[] fileNames;
 	private FileStatus[] fileStatuses;
 	private boolean windowsEncodeSubfolder = false;
 	private int filePrefixLength;
+	private int downloadCount;
+	private int downloadedCount;
+	private int maxToMiss;
+	private int startingIndex;
 	// }
 	// Preferences {
 	protected static final String PREF_WIKI_DOMAIN_DEFAULT = "commons.wikimedia.org";
@@ -116,35 +121,63 @@ public abstract class ImkerBase extends App {
 		if (windowsEncodeSubfolder)
 			new File(outputFolder.getPath() + File.separator + FOLDER_WINDOWS_ENCODED_FILES).mkdir();
 
-		for (int i = 0; i < fileNames.length; i++) {
-			final String fileName = fileNames[i]
-					.substring(getFilePrefixLenght());
-			sh.handle(i, fileName);
-
-			final File outputFile = new File(outputFolder.getPath()
-					+ File.separator + windowsNormalize(fileName));
-			if (outputFile.exists()) {
-				fileStatuses[i] = FileStatus.DOWNLOADED;
-				sh.handleConclusion(" ... "
-						+ MSGS.getString("Status_File_Exists"));
-				continue;
-			}
-			// TODO add option to rate limit
-			boolean downloaded = (boolean) attemptFetch(new WikiAPI() {
-
-				@Override
-				public Object fetch() throws IOException {
-					return wiki.getImage(fileName, outputFile);
+		boolean stillGoing = true;
+		while (stillGoing && downloadedCount < downloadCount) {
+			for (int i = startingIndex; i < fileNames.length; i++) {
+				if (Math.random() > randomThreshold) {
+					continue;
 				}
-			}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
-			if (downloaded == false) {
-				fileStatuses[i] = FileStatus.NOT_FOUND;
-				sh.handleConclusion(" ... "
-						+ MSGS.getString("Status_File_Not_Found"));
-				continue;
+				final String fileName = fileNames[i]
+						.substring(getFilePrefixLenght());
+				sh.handle(downloadedCount, fileName);
+
+				final File outputFile = new File(outputFolder.getPath()
+						+ File.separator + windowsNormalize(fileName));
+				if (outputFile.exists()) {
+					fileStatuses[i] = FileStatus.DOWNLOADED;
+					sh.handleConclusion(" ... "
+							+ MSGS.getString("Status_File_Exists"));
+					if (maxToMiss == 0) {
+						downloadCount--;
+					} else {
+						maxToMiss--;
+					}
+					continue;
+				}
+				// TODO add option in the GUI to rate limit
+				// for now, just force it
+				try {
+System.out.println(i + ": Sleeping...");
+					Thread.sleep((int) (Math.random() * 2000));
+System.out.println(i + ": Done Sleeping");
+				} catch (InterruptedException e) {
+					stillGoing = false;
+					break;
+				}
+				boolean downloaded = (boolean) attemptFetch(new WikiAPI() {
+
+					@Override
+					public Object fetch() throws IOException {
+						return wiki.getImage(fileName, outputFile);
+					}
+				}, MAX_FAILS, MAX_EXCEPTION_SLEEP_TIME);
+				if (downloaded == false) {
+					fileStatuses[i] = FileStatus.NOT_FOUND;
+					sh.handleConclusion(" ... "
+							+ MSGS.getString("Status_File_Not_Found"));
+					if (maxToMiss == 0) {
+						downloadCount--;
+					} else {
+						maxToMiss--;
+					}
+					continue;
+				}
+				fileStatuses[i] = FileStatus.DOWNLOADED;
+				sh.handleConclusion(" ... " + MSGS.getString("Status_File_Saved"));
+				if (++downloadedCount == downloadCount) {
+					break;
+				}
 			}
-			fileStatuses[i] = FileStatus.DOWNLOADED;
-			sh.handleConclusion(" ... " + MSGS.getString("Status_File_Saved"));
 		}
 	}
 
@@ -422,9 +455,94 @@ public abstract class ImkerBase extends App {
 	 */
 	public void setWiki(String domain) throws IOException {
 		wiki = new Wiki(domain);
-		wiki.setMaxLag(3);
+		wiki.setMaxLag(10);
 		wiki.setLogLevel(Level.WARNING);
 		filePrefixLength = 1 + wiki.namespaceIdentifier(Wiki.FILE_NAMESPACE).length();
+	}
+
+	/**
+	 * Return the number of files to download
+	 * 
+	 * @return the desired number of files to download
+	 */
+	protected int getDownloadCount() {
+		return downloadCount;
+	}
+
+	/**
+	 * Set the number of files to download
+	 * 
+	 * @param desiredDownloadCount
+	 *            the desired number of files to download
+	 */
+	protected void setDownloadCount(int desiredDownloadCount) {
+		downloadCount = desiredDownloadCount;
+	}
+
+	/**
+	 * Set the random threshold (proportion of files to download
+	 * versus the number of total files present)
+	 * 
+	 * @param threshold
+	 *            the desired threshold/proportion
+	 */
+	protected void setRandomThreshold(double threshold) {
+		randomThreshold = threshold;
+	}
+
+	/**
+	 * Return the number of files downloaded
+	 * 
+	 * @return the downloaded count
+	 */
+	protected int getDownloadedCount() {
+		return downloadedCount;
+	}
+
+	/**
+	 * Get the maximum number of files to miss (due to error or
+	 * duplicate file name) before count to download must be decremented
+	 * 
+	 * @return the count stated above
+	 */
+	protected int getMaxToMiss() {
+		return maxToMiss;
+	}
+
+	/**
+	 * Set the maximum number of files to miss (due to error or
+	 * duplicate file name) before count to download must be decremented
+	 * 
+	 * @param maximum
+	 *            the maximum described above: equal to
+	 *            (total file count) - (desired download count)
+	 */
+	protected void setMaxToMiss(int maximum) {
+		maxToMiss = maximum;
+	}
+
+	/**
+	 * Set the starting index of the download.  In case of failure,
+	 * this will need to be set so you do not just download files from
+	 * the beginning of the list.
+	 * 
+	 * @param index
+	 *            the starting index to download; must be between
+	 *            [0, getFilenames().length)
+	 */
+	protected void setStartingIndex(int index) {
+		startingIndex = index;
+	}
+
+	/**
+	 * Get the starting index of the download.  In case of failure,
+	 * this will need to be set so you do not just download files from
+	 * the beginning of the list.
+	 * 
+	 * @return the starting index to download
+	 */
+	protected int getStartingIndex() {
+		return startingIndex;
 	}
 
 	public int getFilePrefixLenght() {
